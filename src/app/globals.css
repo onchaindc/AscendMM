@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/* =============================================================================
+ * AscendMM design system — institutional, dark-first.
+ * Surfaces are near-black with a faint cold cast; a single muted brass accent
+ * carries the brand. Green/red are reserved exclusively for data (PnL, APY).
+ * ========================================================================== */
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", monospace;
+
+  /* Surfaces */
+  --color-background: oklch(0.145 0.012 255);
+  --color-surface: oklch(0.175 0.012 255);
+  --color-surface-2: oklch(0.205 0.012 255);
+  --color-surface-3: oklch(0.235 0.012 255);
+
+  /* Lines */
+  --color-line: oklch(0.26 0.012 255);
+  --color-line-strong: oklch(0.33 0.012 255);
+
+  /* Text */
+  --color-fg: oklch(0.93 0.005 95);
+  --color-muted: oklch(0.66 0.01 255);
+  --color-faint: oklch(0.5 0.01 255);
+
+  /* Brand accent — muted brass */
+  --color-accent: oklch(0.77 0.1 85);
+  --color-accent-hover: oklch(0.81 0.1 85);
+  --color-accent-fg: oklch(0.16 0.02 85);
+  --color-accent-muted: oklch(0.77 0.1 85 / 0.14);
+
+  /* Semantic data colors */
+  --color-positive: oklch(0.74 0.14 158);
+  --color-negative: oklch(0.66 0.18 25);
+  --color-warning: oklch(0.79 0.12 85);
+  --color-info: oklch(0.72 0.09 240);
+}
+
+/* Base ------------------------------------------------------------------- */
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-accent-muted);
+  color: var(--color-fg);
+}
+
+/* Numeric data should always use tabular figures */
+.data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Motion — subtle, entrance only ------------------------------------------ */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease both;
+}
+
+.dialog-overlay[data-state="open"] {
+  animation: fade-in 0.2s ease both;
+}
+
+.dialog-content[data-state="open"] {
+  animation: dialog-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .dialog-overlay[data-state="open"],
+  .dialog-content[data-state="open"] {
+    animation: none;
+  }
+}
+
+/* Chart tooltip helper */
+.chart-tooltip {
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface-2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+}

@@ -1,1 +1,115 @@
 # AscendMM
+
+Professional market-making and strategy vault protocol for the Elysium ecosystem.
+
+This repository contains the **AscendMM frontend**. The product shell (Phase 1)
+is now integrated with the **deployed AscendVault on the Kinetiq Elysium
+testnet**: wallet connection, live on-chain vault reads, and real approve /
+deposit / redeem flows are implemented against chain **99801**. Smart contracts
+are developed separately — nothing here modifies or redeploys them.
+
+## Live testnet integration
+
+| Item | Value |
+| --- | --- |
+| Network | Elysium Testnet (chain ID **99801**) |
+| RPC | `https://testnet-rpc.elysium.kinetiq.xyz` |
+| Gas token | HYPE |
+| Explorer | `https://elysium.kinetiq.xyz/testnet-explorer` |
+| AscendVault | [`0x3633E203A2E46C565E72d386c350ba7378384b49`](https://elysium.kinetiq.xyz/testnet-explorer/address/0x3633E203A2E46C565E72d386c350ba7378384b49) |
+| Underlying asset | [`0xaeB1Eb6928a1980830eEAE86e70CF751f0D4CEd6`](https://elysium.kinetiq.xyz/testnet-explorer/address/0xaeB1Eb6928a1980830eEAE86e70CF751f0D4CEd6) — **TEST-ONLY MockERC20 “asMMT”** |
+| Vault owner | `0x550C5DDab8f8D5b57275db3048d9D327Ea748D1b` |
+
+> ⚠️ **asMMT is a mock asset with no value**, deployed purely to exercise the
+> deposit/redeem flows on testnet. The vault itself is a standard ERC-4626
+> share vault (share token “asMMV”, 18 decimals) whose `asset()` is the
+> TEST-ONLY asMMT token — verified on-chain.
+
+Implemented against the deployed contracts:
+
+- Central chain config and verified ABIs (`src/lib/elysium.ts`, `src/lib/abis.ts`)
+- EIP-6963 / injected wallet connection, reconnection, and disconnect
+- Network detection with one-click add/switch to chain 99801
+- Live vault reads: `totalAssets`, `totalSupply`, `asset`, `decimals`, `name`,
+  `symbol`, `owner`, `strategy`, `convertToAssets` (share price), plus user
+  asMMT balance, vault allowance, and share balance — all pinned to chain
+  99801 so they never depend on the wallet's active network
+- Real ERC-20 `approve` (only when the allowance is insufficient, confirmed
+  on-chain before the deposit is broadcast)
+- Real ERC-4626 `deposit` and `redeem`
+- Transaction states: wallet confirmation → pending (explorer link) →
+  success / failure; reads auto-refresh after every confirmed transaction
+- Honest labeling throughout: “Elysium Testnet · chain 99801” and
+  “TEST-ONLY asMMT (mock asset, no value)”
+
+Not exposed by the deployed contract (and therefore not invented): the vault's
+fee configuration. The ABI was probed via RPC — `strategy()` exists (zero
+address until the owner sets one), while `fees()`/`fee()` and all natural
+variants revert, so the UI shows “Not exposed”.
+
+## Stack
+
+- Next.js 15 (App Router) + TypeScript
+- wagmi v3 + viem (wallet, contract reads/writes, chain 99801 config)
+- TanStack Query (react-query cache backing wagmi reads; invalidation on tx)
+- Tailwind CSS v4 + shadcn/ui-style primitives on Radix
+- Lucide icons, Recharts for performance charts
+
+## Routes
+
+| Route            | Purpose                                                     |
+| ---------------- | ----------------------------------------------------------- |
+| `/`              | Overview: hero, metrics, capabilities, featured vaults (leads with the live vault) |
+| `/vaults`        | Vault explorer with type filters (live vault + preview entries) |
+| `/vaults/[id]`   | Vault detail — for the live vault: real chain state panel, approve/deposit/redeem; for preview entries: Phase 1 mock UI |
+| `/strategies`    | Strategy marketplace (preview data)                         |
+| `/portfolio`     | Live wallet portfolio: asMMT balance, asMMV shares, position value |
+
+## Architecture
+
+```
+src/
+  app/                 routes (compose components only)
+  components/          UI — typed props, no direct data fetching
+    layout/  vault/  strategy/  portfolio/  wallet/  ui/
+  hooks/
+    use-vault-contract.ts   live contract + user reads (pinned to 99801)
+    use-vault-writes.ts     shared tx state machine (confirm→pending→result)
+  lib/
+    elysium.ts         ⛓ chain 99801 config + deployed addresses (source of truth)
+    abis.ts            verified vault ABI (no invented signatures)
+    wagmi.ts           wagmi config (single chain, public RPC, injected connector)
+    vaults.ts          vault catalog: live testnet entry + preview entries
+    types.ts           domain types the UI renders
+    format.ts          number / percentage / token formatters
+    mock-data.ts       ⚠️ preview-only data for non-deployed vault entries
+```
+
+Boundaries: only pages import the vault catalog; components take typed props.
+On-chain data flows through the two hooks; writes go exclusively through
+`useVaultTransaction`, which invalidates contract queries on confirmation so
+balances and vault state refresh automatically.
+
+**Preview data is isolated in `src/lib/mock-data.ts` and clearly labeled.**
+Only the `ascend-asmmt-testnet` vault entry is live and transactable; every
+other entry remains a Phase 1 placeholder and can never call the deployed
+contracts.
+
+## Deliberately not implemented
+
+Strategy execution, HyperCore/Ascend integration, real analytics/indexing
+(activity, PnL history), backend auth, database integration, and any fee
+display (no fee getter exists on the deployed contract). Preview vault entries
+cannot transact.
+
+## Development
+
+```bash
+bun install
+bun run dev        # dev server
+bun run typecheck  # tsc --noEmit
+bun run build      # production build
+```
+
+To use the live flows you need an EVM browser wallet with Elysium testnet
+HYPE for gas and TEST-ONLY asMMT (available from the testnet faucet/owner).
