@@ -99,13 +99,29 @@ export function LiveVaultPanel() {
         </div>
 
         <div className="rounded-lg border border-line bg-surface p-5">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
             <div>
               <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
                 Total Assets
               </p>
               <p className="data mt-1 text-sm font-medium text-fg">
                 {formatTokenAmount(vault.totalAssets)} asMMT
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
+                Idle Assets
+              </p>
+              <p className="data mt-1 text-sm font-medium text-fg">
+                {formatTokenAmount(vault.idleAssets)} asMMT
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
+                Deployed (Strategy)
+              </p>
+              <p className="data mt-1 text-sm font-medium text-fg">
+                {formatTokenAmount(vault.strategyInvested)} asMMT
               </p>
             </div>
             <div>
@@ -192,7 +208,7 @@ export function LiveVaultPanel() {
 
         <div className="rounded-lg border border-line bg-surface p-5">
           {isConnected && address ? (
-            <div className="grid grid-cols-3 gap-x-6">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
                   asMMT balance
@@ -217,6 +233,14 @@ export function LiveVaultPanel() {
                   {formatTokenAmount(user.shares)} asMMV
                 </p>
               </div>
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
+                  Asset value
+                </p>
+                <p className="data mt-1 text-sm font-medium text-fg">
+                  {formatTokenAmount(user.assetValue ?? (user.shares !== undefined ? 0n : undefined))} asMMT
+                </p>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted">
@@ -228,8 +252,11 @@ export function LiveVaultPanel() {
 
       <p className="text-xs leading-relaxed text-faint">
         All figures are read live from the deployed AscendVault contract on{" "}
-        {ELYSIUM_NETWORK_LABEL} (chain {ELYSIUM_CHAIN_ID}). The underlying asMMT
-        token is a TEST-ONLY mock asset with no value.
+        {ELYSIUM_NETWORK_LABEL} (chain {ELYSIUM_CHAIN_ID}). Idle assets sit in
+        the vault while deployed assets are held by its strategy —
+        idle + deployed = total assets. The underlying asMMT token is a
+        TEST-ONLY mock asset with no value, and the current IdleStrategy
+        generates no yield.
       </p>
     </div>
   );

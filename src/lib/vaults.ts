@@ -31,18 +31,18 @@ export const LIVE_TESTNET_VAULT: Vault = {
   assets: ["asMMT"],
   type: "Single-Sided",
   description:
-    "The deployed AscendMM market-making vault on Elysium testnet, holding the TEST-ONLY asMMT mock asset. All stats below are read live from chain 99801.",
+    "The deployed, strategy-enabled AscendMM vault on Elysium testnet, holding the TEST-ONLY asMMT mock asset. All stats below are read live from chain 99801.",
   tvl: 0,
   apy: 0,
   change24h: 0,
   risk: "Moderate",
   status: "Active",
   strategy: {
-    name: "Market Making — strategy pending",
+    name: "Idle — No yield strategy",
     status: "Active",
     risk: "Moderate",
     style:
-      "The vault owner has not assigned a strategy contract yet (strategy() returns the zero address on-chain).",
+      "The vault's IdleStrategy holds deposited assets idle on-chain and generates no yield. The strategy address is set on-chain and verified.",
     performanceFee: 0,
   },
   allocation: [{ asset: "asMMT", percentage: 100 }],

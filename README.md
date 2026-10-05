@@ -16,22 +16,30 @@ are developed separately — nothing here modifies or redeploys them.
 | RPC | `https://testnet-rpc.elysium.kinetiq.xyz` |
 | Gas token | HYPE |
 | Explorer | `https://elysium.kinetiq.xyz/testnet-explorer` |
-| AscendVault | [`0x3633E203A2E46C565E72d386c350ba7378384b49`](https://elysium.kinetiq.xyz/testnet-explorer/address/0x3633E203A2E46C565E72d386c350ba7378384b49) |
+| AscendVault | [`0xa49Ef74F7de5022340bE2f7DeD7bD2c54b344480`](https://elysium.kinetiq.xyz/testnet-explorer/address/0xa49Ef74F7de5022340bE2f7DeD7bD2c54b344480) |
+| Strategy (Idle) | [`0xE6662124835F0927245697459fd90e77ac58329a`](https://elysium.kinetiq.xyz/testnet-explorer/address/0xE6662124835F0927245697459fd90e77ac58329a) — **No yield strategy** |
 | Underlying asset | [`0xaeB1Eb6928a1980830eEAE86e70CF751f0D4CEd6`](https://elysium.kinetiq.xyz/testnet-explorer/address/0xaeB1Eb6928a1980830eEAE86e70CF751f0D4CEd6) — **TEST-ONLY MockERC20 “asMMT”** |
 | Vault owner | `0x550C5DDab8f8D5b57275db3048d9D327Ea748D1b` |
 
 > ⚠️ **asMMT is a mock asset with no value**, deployed purely to exercise the
-> deposit/redeem flows on testnet. The vault itself is a standard ERC-4626
+> deposit/redeem flows on testnet. The vault is a strategy-enabled ERC-4626
 > share vault (share token “asMMV”, 18 decimals) whose `asset()` is the
-> TEST-ONLY asMMT token — verified on-chain.
+> TEST-ONLY asMMT token and whose `strategy()` is the deployed IdleStrategy —
+> verified on-chain. Idle assets sit in the vault; `strategyInvested()`
+> reports what is deployed to the strategy; `idle + deployed = totalAssets`.
+> The current IdleStrategy **generates no yield** — no APY or performance
+> numbers are shown because none exist on-chain.
 
 Implemented against the deployed contracts:
 
 - Central chain config and verified ABIs (`src/lib/elysium.ts`, `src/lib/abis.ts`)
 - EIP-6963 / injected wallet connection, reconnection, and disconnect
 - Network detection with one-click add/switch to chain 99801
-- Live vault reads: `totalAssets`, `totalSupply`, `asset`, `decimals`, `name`,
-  `symbol`, `owner`, `strategy`, `convertToAssets` (share price), plus user
+- Live strategy-aware vault reads: `asset`, `totalAssets`, `totalSupply`,
+  `strategy`, `strategyInvested`, idle assets (vault's underlying-token
+  balance), `owner`, `decimals`, `name`, `symbol`, `convertToAssets` (share
+  price and user position value), `convertToShares` (deposit exchange rate),
+  `previewDeposit` / `previewRedeem` (live transaction estimates), plus user
   asMMT balance, vault allowance, and share balance — all pinned to chain
   99801 so they never depend on the wallet's active network
 - Real ERC-20 `approve` (only when the allowance is insufficient, confirmed
@@ -43,9 +51,11 @@ Implemented against the deployed contracts:
   “TEST-ONLY asMMT (mock asset, no value)”
 
 Not exposed by the deployed contract (and therefore not invented): the vault's
-fee configuration. The ABI was probed via RPC — `strategy()` exists (zero
-address until the owner sets one), while `fees()`/`fee()` and all natural
-variants revert, so the UI shows “Not exposed”.
+fee configuration. The ABI was probed via RPC — `fees()`, `fee()`,
+`feeConfig()` and `performanceFee()` all revert, so the UI shows “Not
+exposed”. The strategy owner operations `investIdle()` / `exitStrategy()`
+are deliberately not part of the user-facing ABI and are never presented as
+user deposit controls.
 
 ## Stack
 
@@ -97,10 +107,11 @@ contracts.
 
 ## Deliberately not implemented
 
-Strategy execution, HyperCore/Ascend integration, real analytics/indexing
-(activity, PnL history), backend auth, database integration, and any fee
-display (no fee getter exists on the deployed contract). Preview vault entries
-cannot transact.
+Strategy owner operations (`investIdle()` / `exitStrategy()`), real strategy
+yield (the current IdleStrategy generates none), HyperCore/Ascend integration,
+real analytics/indexing (activity, PnL history), backend auth, database
+integration, and any fee display (no fee getter exists on the deployed
+contract). Preview vault entries cannot transact.
 
 ## Development
 

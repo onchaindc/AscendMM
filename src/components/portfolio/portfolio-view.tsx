@@ -28,7 +28,7 @@ function PositionRow({ label, value }: { label: string; value: React.ReactNode }
  */
 export function PortfolioView() {
   const { address, isConnected, openConnectModal } = useWallet();
-  const { vault, user, isLoading } = useVaultContract(address);
+  const { user, isLoading } = useVaultContract(address);
 
   if (!isConnected || !address) {
     return (
@@ -55,12 +55,11 @@ export function PortfolioView() {
     );
   }
 
-  // Current value of the user's shares in assets, via the live share price
-  // (1e18 raw base). 1:1 while the vault is empty.
+  // Current value of the user's shares in assets, converted by the vault
+  // itself (convertToAssets(userShares)) — strategy-aware by construction.
+  // 1:1 while the vault is empty; 0 when no shares are held.
   const positionValueRaw =
-    user.shares !== undefined && vault.sharePrice !== undefined
-      ? (user.shares * vault.sharePrice) / 10n ** 18n
-      : undefined;
+    user.assetValue ?? (user.shares !== undefined ? 0n : undefined);
   const hasPosition =
     user.shares !== undefined && user.shares > 0n;
 

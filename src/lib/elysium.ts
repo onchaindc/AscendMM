@@ -3,9 +3,10 @@
  *
  * Single source of truth for the Kinetiq Elysium testnet integration. The
  * addresses below are the deployed testnet contracts and are pinned to the
- * deployment in the contracts repo — they must not be changed here.
+ * current strategy-enabled deployment in the contracts repo — they must not
+ * be changed here.
  *
- * Network facts verified against the live RPC (2026-10-04):
+ * Network facts verified against the live RPC (2026-10-05):
  *   - eth_chainId → 99801 (0x185d9)
  *   - Native gas token: HYPE (18 decimals)
  *   - Block explorer: https://elysium.kinetiq.xyz/testnet-explorer
@@ -48,12 +49,23 @@ export const elysiumTestnet = {
 } as const satisfies Chain;
 
 /**
- * Deployed AscendVault (ERC-4626) on Elysium testnet. Verified on-chain:
- * asset() → the TEST-ONLY asMMT MockERC20, owner() → VAULT_OWNER_ADDRESS,
- * decimals() → 18.
+ * Deployed AscendVault (ERC-4626) on Elysium testnet — the current,
+ * strategy-enabled deployment. Verified on-chain (2026-10-05):
+ * asset() → the TEST-ONLY asMMT MockERC20, strategy() → STRATEGY_ADDRESS,
+ * owner() → VAULT_OWNER_ADDRESS, decimals() → 18, and strategyInvested(),
+ * previewDeposit()/previewRedeem() all respond.
  */
 export const ASCEND_VAULT_ADDRESS = getAddress(
-  "0x3633E203A2E46C565E72d386c350ba7378384b49",
+  "0xa49Ef74F7de5022340bE2f7DeD7bD2c54b344480",
+);
+
+/**
+ * The vault's deployed strategy contract (IdleStrategy), verified on-chain via
+ * strategy(). It holds idle assets without deploying them and generates NO
+ * yield — the UI must always label it as a no-yield strategy.
+ */
+export const STRATEGY_ADDRESS = getAddress(
+  "0xE6662124835F0927245697459fd90e77ac58329a",
 );
 
 /**

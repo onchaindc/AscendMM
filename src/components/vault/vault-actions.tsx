@@ -4,7 +4,7 @@ import * as React from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Info, Loader2 } from "lucide-react";
 import { erc20Abi, parseUnits } from "viem";
 import type { Address, Hash } from "viem";
-import { useWriteContract } from "wagmi";
+import { useReadContract, useWriteContract } from "wagmi";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ import {
   ELYSIUM_CHAIN_ID,
   ELYSIUM_NETWORK_LABEL,
 } from "@/lib/elysium";
-import { formatPercent, formatTokenAmount } from "@/lib/format";
+import { formatTokenAmount } from "@/lib/format";
 import type { Vault } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -34,12 +34,17 @@ import { cn } from "@/lib/utils";
  * testnet (chain 99801). Approvals, deposits, and redemptions are genuine
  * contract interactions — no simulation anywhere in this file.
  *
+ * Estimates are real on-chain previews: the deposit modal reads
+ * `previewDeposit(assets)` and the withdraw modal reads `previewRedeem(shares)`
+ * from the vault (debounced while typing) — no client-side rate math.
+ *
  * Transaction states: wallet confirmation → pending → success / failure.
  * Deposit uses the standard ERC-4626 entry: when the asMMT allowance is
  * insufficient, an approval is broadcast first and must confirm on-chain
- * before the deposit is sent. After every confirmed transaction all contract
- * reads are invalidated by the shared transaction hook, so balances and vault
- * state refresh automatically.
+ * before the deposit is sent. Redemption is strategy-aware: the vault settles
+ * withdrawals even while assets are deployed in the strategy. After every
+ * confirmed transaction all contract reads are invalidated by the shared
+ * transaction hook, so balances and vault state refresh automatically.
  *
  * All user/contract figures arrive via props from `LiveVaultDetail`, which
  * only binds them for the deployed testnet vault — preview vaults can never
@@ -165,6 +170,41 @@ function ActionModal({
     }
   }, [amount]);
 
+  // Debounced copy of the parsed amount so live preview reads don't fire on
+  // every keystroke against the public RPC.
+  const [debouncedParsed, setDebouncedParsed] = React.useState<bigint | undefined>(
+    undefined,
+  );
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedParsed(parsed), 350);
+    return () => clearTimeout(timer);
+  }, [parsed]);
+
+  // Real on-chain preview for the entered amount (previewDeposit for the
+  // deposit direction, previewRedeem for the withdraw direction).
+  const preview = useReadContract({
+    abi: ascendVaultAbi,
+    address: ASCEND_VAULT_ADDRESS,
+    functionName: isDeposit ? "previewDeposit" : "previewRedeem",
+    args: [debouncedParsed ?? 0n],
+    chainId: ELYSIUM_CHAIN_ID,
+    query: {
+      enabled:
+        debouncedParsed !== undefined &&
+        userAddress !== undefined &&
+        !isWaiting,
+    },
+  });
+  // Exchange rate for the deposit direction (convertToShares of 1 asset).
+  const sharesPerAsset = useReadContract({
+    abi: ascendVaultAbi,
+    address: ASCEND_VAULT_ADDRESS,
+    functionName: "convertToShares",
+    args: [ONE_SHARE],
+    chainId: ELYSIUM_CHAIN_ID,
+    query: { enabled: isDeposit },
+  });
+
   const balanceRaw = isDeposit ? userAssetBalance : userShares;
   const exceedsBalance =
     parsed !== undefined && balanceRaw !== undefined && parsed > balanceRaw;
@@ -174,17 +214,12 @@ function ActionModal({
 
   const amountValid = parsed !== undefined && !exceedsBalance && userAddress !== undefined;
 
-  // Live share price from the vault contract (1e18 raw base). The vault is
-  // empty at deployment, so this is 1:1 until the first deposit.
+  // Live share price from the vault contract (1e18 raw base), shown in the
+  // withdraw direction; deposits show the live exchange rate instead.
   const sharePriceLabel = sharePriceRaw
     ? formatTokenAmount(sharePriceRaw)
     : "—";
-  const estimateValue =
-    parsed === undefined || sharePriceRaw === undefined || sharePriceRaw === 0n
-      ? undefined
-      : isDeposit
-        ? (parsed * ONE_SHARE) / sharePriceRaw // assets → shares
-        : (parsed * sharePriceRaw) / ONE_SHARE; // shares → assets
+  const estimateValue = preview.data;
 
   React.useEffect(() => {
     if (!open) {
@@ -333,8 +368,14 @@ function ActionModal({
               </span>
             </div>
             <div className="mt-1.5 flex items-center justify-between text-sm">
-              <span className="text-muted">Share price</span>
-              <span className="data text-fg">{sharePriceLabel}</span>
+              <span className="text-muted">
+                {isDeposit ? "Exchange rate" : "Share price"}
+              </span>
+              <span className="data text-fg">
+                {isDeposit
+                  ? `1 asMMT = ${formatTokenAmount(sharesPerAsset.data)} asMMV`
+                  : sharePriceLabel}
+              </span>
             </div>
             <div className="mt-1.5 flex items-center justify-between text-sm">
               <span className="text-muted">
@@ -343,10 +384,18 @@ function ActionModal({
               <span className="data text-fg">
                 {isDeposit
                   ? formatTokenAmount(userAllowance)
-                  : formatPercent(0, 0)}
+                  : "Not exposed on-chain"}
               </span>
             </div>
           </div>
+
+          {!isDeposit ? (
+            <div className="flex items-start gap-2 rounded-md border border-line bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-accent" />
+              Redemptions are strategy-aware: the vault settles withdrawals even
+              while assets are deployed in the strategy.
+            </div>
+          ) : null}
 
           {needsApproval ? (
             <div className="flex items-start gap-2 rounded-md border border-line bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted">

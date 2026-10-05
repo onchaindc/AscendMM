@@ -12,6 +12,8 @@ import type { Vault } from "@/lib/types";
  * directly — so it can be reused with live data later.
  */
 export function VaultCard({ vault }: { vault: Vault }) {
+  const isLive = vault.contract.status.startsWith("Live");
+
   return (
     <Link
       href={`/vaults/${vault.id}`}
@@ -47,15 +49,23 @@ export function VaultCard({ vault }: { vault: Vault }) {
           <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
             APY
           </p>
-          <p className="data mt-1 text-sm font-medium text-fg">
-            {formatPercent(vault.apy)}
-          </p>
+          {isLive ? (
+            <p className="data mt-1 text-sm font-medium text-fg">No yield</p>
+          ) : (
+            <p className="data mt-1 text-sm font-medium text-fg">
+              {formatPercent(vault.apy)}
+            </p>
+          )}
         </div>
         <div>
           <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
             24h
           </p>
-          <Delta value={vault.change24h} className="mt-1 text-sm" />
+          {isLive ? (
+            <p className="data mt-1 text-sm font-medium text-fg">—</p>
+          ) : (
+            <Delta value={vault.change24h} className="mt-1 text-sm" />
+          )}
         </div>
       </div>
 

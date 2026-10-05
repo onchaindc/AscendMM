@@ -17,8 +17,13 @@ import {
  * never depends on whichever network the connected wallet happens to have
  * active — data is always read through the public Elysium testnet RPC.
  *
- * User-scoped reads (balances/allowance) are disabled until a wallet is
- * connected; protocol-level reads always run.
+ * Strategy-aware accounting: idleAssets = vault's underlying-token balance,
+ * deployedAssets = strategyInvested(), and idle + deployed = totalAssets.
+ * Pricing always comes from the vault's own convert/preview functions —
+ * never from strategy-side totals.
+ *
+ * User-scoped reads (balances/allowance/asset value) are disabled until a
+ * wallet is connected; protocol-level reads always run.
  */
 
 const ONE_SHARE = 10n ** 18n;
@@ -78,6 +83,20 @@ export function useVaultContract(userAddress: Address | undefined) {
     functionName: "strategy",
     chainId,
   });
+  const strategyInvested = useReadContract({
+    abi: ascendVaultAbi,
+    address: ASCEND_VAULT_ADDRESS,
+    functionName: "strategyInvested",
+    chainId,
+  });
+  // Idle assets: the underlying token balance held directly by the vault.
+  const idleAssets = useReadContract({
+    abi: erc20Abi,
+    address: ASMMT_TOKEN_ADDRESS,
+    functionName: "balanceOf",
+    args: [ASCEND_VAULT_ADDRESS],
+    chainId,
+  });
   // Price of one share (1e18 raw) in assets — 1:1 while the vault is empty.
   const sharePrice = useReadContract({
     abi: ascendVaultAbi,
@@ -112,6 +131,17 @@ export function useVaultContract(userAddress: Address | undefined) {
     chainId,
     query: { enabled: connected },
   });
+  // User's position value in assets, converted by the vault itself
+  // (convertToAssets(userShares)) — strategy-aware by construction.
+  const sharesRaw = shares.data;
+  const userAssetValue = useReadContract({
+    abi: ascendVaultAbi,
+    address: ASCEND_VAULT_ADDRESS,
+    functionName: "convertToAssets",
+    args: [sharesRaw ?? 0n],
+    chainId,
+    query: { enabled: connected && sharesRaw !== undefined && sharesRaw > 0n },
+  });
 
   const all = [
     asset,
@@ -122,10 +152,13 @@ export function useVaultContract(userAddress: Address | undefined) {
     symbol,
     owner,
     strategy,
+    strategyInvested,
+    idleAssets,
     sharePrice,
     assetBalance,
     shares,
     allowance,
+    userAssetValue,
   ];
 
   async function refetchAll() {
@@ -142,12 +175,15 @@ export function useVaultContract(userAddress: Address | undefined) {
       symbol: symbol.data,
       owner: owner.data,
       strategy: strategy.data,
+      strategyInvested: strategyInvested.data,
+      idleAssets: idleAssets.data,
       sharePrice: sharePrice.data,
     },
     user: {
       assetBalance: assetBalance.data,
       shares: shares.data,
       allowance: allowance.data,
+      assetValue: userAssetValue.data,
     },
     isLoading: all.some((query) => query.isLoading),
     refetchAll,

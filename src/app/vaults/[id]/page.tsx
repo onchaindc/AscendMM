@@ -9,6 +9,7 @@ import { Delta } from "@/components/ui/delta";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StatCard } from "@/components/ui/stat-card";
+import { LiveStrategyCard } from "@/components/vault/live-strategy-card";
 import { LiveVaultDetail } from "@/components/vault/live-vault-detail";
 import { LiveVaultPanel } from "@/components/vault/live-vault-panel";
 import { VaultActivity } from "@/components/vault/vault-activity";
@@ -118,15 +119,27 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
       </div>
 
       {/* Headline stats -------------------------------------------------- */}
-      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="TVL" value={formatUsdCompact(vault.tvl)} />
-        <StatCard label="APY" value={formatPercent(vault.apy)} />
-        <StatCard
-          label="24h Performance"
-          value={<Delta value={vault.change24h} withIcon />}
-        />
-        <StatCard label="Risk" value={<RiskBadge risk={vault.risk} />} />
-      </div>
+      {isLive ? (
+        <div className="mt-6 rounded-lg border border-line bg-surface px-5 py-4">
+          <p className="text-sm leading-relaxed text-muted">
+            Live vault figures are read directly from chain 99801 in the{" "}
+            <span className="font-medium text-fg">Live chain state</span> panel
+            below. No APY, TVL, or performance numbers are published — the
+            current strategy is a no-yield idle strategy and no history exists
+            yet.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="TVL" value={formatUsdCompact(vault.tvl)} />
+          <StatCard label="APY" value={formatPercent(vault.apy)} />
+          <StatCard
+            label="24h Performance"
+            value={<Delta value={vault.change24h} withIcon />}
+          />
+          <StatCard label="Risk" value={<RiskBadge risk={vault.risk} />} />
+        </div>
+      )}
 
       {/* Performance ----------------------------------------------------- */}
       <Card className="mt-8">
@@ -134,7 +147,15 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
           <CardTitle>Performance</CardTitle>
         </CardHeader>
         <CardContent>
-          <VaultPerformanceChart series={vault.performance} />
+          {isLive ? (
+            <p className="py-8 text-center text-sm text-muted">
+              No performance history — this vault was freshly deployed and its
+              IdleStrategy generates no yield. Performance tracking will appear
+              once real strategy returns exist on-chain.
+            </p>
+          ) : (
+            <VaultPerformanceChart series={vault.performance} />
+          )}
         </CardContent>
       </Card>
 
@@ -149,34 +170,34 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Strategy</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="divide-y divide-line">
-              <DetailRow label="Strategy name" value={vault.strategy.name} mono />
-              <DetailRow
-                label="Status"
-                value={<StatusBadge status={vault.strategy.status} />}
-              />
-              <DetailRow
-                label="Risk level"
-                value={<RiskBadge risk={vault.strategy.risk} />}
-              />
-              <DetailRow label="Management style" value={vault.strategy.style} />
-              <DetailRow
-                label="Performance fee"
-                value={
-                  isLive
-                    ? "Not exposed on-chain"
-                    : formatPercent(vault.strategy.performanceFee, 0)
-                }
-                mono
-              />
-            </dl>
-          </CardContent>
-        </Card>
+        {isLive ? (
+          <LiveStrategyCard />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Strategy</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="divide-y divide-line">
+                <DetailRow label="Strategy name" value={vault.strategy.name} mono />
+                <DetailRow
+                  label="Status"
+                  value={<StatusBadge status={vault.strategy.status} />}
+                />
+                <DetailRow
+                  label="Risk level"
+                  value={<RiskBadge risk={vault.strategy.risk} />}
+                />
+                <DetailRow label="Management style" value={vault.strategy.style} />
+                <DetailRow
+                  label="Performance fee"
+                  value={formatPercent(vault.strategy.performanceFee, 0)}
+                  mono
+                />
+              </dl>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Live chain state ------------------------------------------------ */}
