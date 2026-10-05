@@ -98,7 +98,7 @@ export function LiveVaultPanel() {
           </span>
         </div>
 
-        <div className="rounded-lg border border-line bg-surface p-5">
+        <div className="glass-panel rounded-xl p-5">
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
             <div>
               <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
@@ -206,8 +206,8 @@ export function LiveVaultPanel() {
           ) : null}
         </div>
 
-        <div className="rounded-lg border border-line bg-surface p-5">
-          {isConnected && address ? (
+        <div className="glass-panel rounded-xl p-5">
+          {isConnected && address ?  (
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-wider text-faint">

@@ -356,7 +356,7 @@ function ActionModal({
             ) : null}
           </div>
 
-          <div className="rounded-md border border-line bg-background px-3 py-2.5">
+          <div className="rounded-lg border border-line bg-surface-2/40 px-3 py-2.5">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted">
                 {isDeposit ? "Estimated shares received" : "Estimated assets returned"}

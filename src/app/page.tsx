@@ -58,7 +58,7 @@ export default function HomePage() {
       <section className="border-b border-line">
         <PageContainer className="py-16 sm:py-24">
           <div className="max-w-3xl animate-fade-up">
-            <span className="inline-flex items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-1 text-xs text-muted">
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs text-muted backdrop-blur-sm">
               <span className="size-1.5 rounded-full bg-positive" />
               Live on Elysium Testnet · chain 99801
             </span>
@@ -66,7 +66,7 @@ export default function HomePage() {
             <h1 className="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight text-fg sm:text-5xl lg:text-6xl">
               Professional liquidity
               <br />
-              for <span className="text-accent">Elysium.</span>
+              for <span className="text-gold-gradient">Elysium.</span>
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
@@ -121,9 +121,9 @@ export default function HomePage() {
             {CAPABILITIES.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
-                className="rounded-lg border border-line bg-surface p-6"
+                className="glass-panel glow-hover rounded-xl p-6"
               >
-                <span className="inline-flex size-9 items-center justify-center rounded-md border border-line bg-surface-2">
+                <span className="inline-flex size-9 items-center justify-center rounded-lg border border-line bg-surface-2 backdrop-blur-sm">
                   <Icon className="size-4 text-accent" />
                 </span>
                 <h3 className="mt-4 text-[15px] font-semibold tracking-tight text-fg">

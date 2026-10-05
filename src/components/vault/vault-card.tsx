@@ -17,7 +17,7 @@ export function VaultCard({ vault }: { vault: Vault }) {
   return (
     <Link
       href={`/vaults/${vault.id}`}
-      className="group flex flex-col rounded-lg border border-line bg-surface p-5 transition-colors duration-150 hover:border-accent/40 hover:bg-surface-2/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+      className="glass-panel glow-hover group flex flex-col rounded-xl p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
     >
       <div className="flex items-start justify-between gap-3">
         <div>

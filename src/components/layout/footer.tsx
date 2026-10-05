@@ -13,7 +13,7 @@ export function Footer() {
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <p className="text-[15px] font-semibold tracking-tight text-fg">
-              Ascend<span className="text-accent">MM</span>
+              Ascend<span className="text-gold-gradient">MM</span>
             </p>
             <p className="mt-2 text-sm leading-relaxed text-muted">
               Professional liquidity and market-making infrastructure for the

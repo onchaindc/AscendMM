@@ -1,41 +1,45 @@
 @import "tailwindcss";
 
 /* =============================================================================
- * AscendMM design system — institutional, dark-first.
- * Surfaces are near-black with a faint cold cast; a single muted brass accent
- * carries the brand. Green/red are reserved exclusively for data (PnL, APY).
+ * AscendMM design system — "Black Champagne".
+ *
+ * Deep pure black with very subtle soft gradients; soft champagne-gold
+ * metallic accents; dark glass surfaces (semi-transparent + blur + hairline
+ * gold borders); soft light refraction instead of hard hover color changes.
+ * Green/red remain reserved exclusively for data (PnL deltas).
  * ========================================================================== */
 
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", monospace;
 
-  /* Surfaces */
-  --color-background: oklch(0.145 0.012 255);
-  --color-surface: oklch(0.175 0.012 255);
-  --color-surface-2: oklch(0.205 0.012 255);
-  --color-surface-3: oklch(0.235 0.012 255);
+  /* Surfaces — translucent whites over pure black read as dark glass.
+     Panel components add backdrop-blur (see .glass-panel below). */
+  --color-background: #050505;
+  --color-surface: oklch(1 0 0 / 0.035);
+  --color-surface-2: oklch(1 0 0 / 0.06);
+  --color-surface-3: oklch(1 0 0 / 0.09);
 
-  /* Lines */
-  --color-line: oklch(0.26 0.012 255);
-  --color-line-strong: oklch(0.33 0.012 255);
+  /* Lines — very thin, low-opacity champagne gold hairlines */
+  --color-line: oklch(0.85 0.075 88 / 0.1);
+  --color-line-strong: oklch(0.85 0.075 88 / 0.2);
 
-  /* Text */
-  --color-fg: oklch(0.93 0.005 95);
-  --color-muted: oklch(0.66 0.01 255);
-  --color-faint: oklch(0.5 0.01 255);
+  /* Text — clean white, warm neutral grays */
+  --color-fg: oklch(0.97 0.002 95);
+  --color-muted: oklch(0.74 0.005 95);
+  --color-faint: oklch(0.56 0.008 95);
 
-  /* Brand accent — muted brass */
-  --color-accent: oklch(0.77 0.1 85);
-  --color-accent-hover: oklch(0.81 0.1 85);
-  --color-accent-fg: oklch(0.16 0.02 85);
-  --color-accent-muted: oklch(0.77 0.1 85 / 0.14);
+  /* Brand accent — soft champagne gold / warm metallic (matches the mark) */
+  --color-accent: oklch(0.85 0.08 88);
+  --color-accent-hover: oklch(0.89 0.075 90);
+  --color-accent-fg: oklch(0.2 0.025 85);
+  --color-accent-muted: oklch(0.85 0.08 88 / 0.13);
 
-  /* Semantic data colors */
-  --color-positive: oklch(0.74 0.14 158);
-  --color-negative: oklch(0.66 0.18 25);
-  --color-warning: oklch(0.79 0.12 85);
-  --color-info: oklch(0.72 0.09 240);
+  /* Semantic data colors — muted, never loud */
+  --color-positive: oklch(0.75 0.12 158);
+  --color-negative: oklch(0.66 0.16 25);
+  --color-warning: oklch(0.82 0.1 85);
+  --color-info: oklch(0.74 0.07 240);
 }
 
 /* Base ------------------------------------------------------------------- */
@@ -46,6 +50,13 @@ html {
 
 body {
   background-color: var(--color-background);
+  /* Very subtle soft gradients: a faint champagne glow falling from above and
+     a whisper of warmth to the right — depth without noise. */
+  background-image:
+    radial-gradient(1100px 520px at 50% -8%, oklch(0.85 0.075 88 / 0.05), transparent 62%),
+    radial-gradient(900px 480px at 88% 12%, oklch(0.85 0.06 88 / 0.025), transparent 58%),
+    radial-gradient(1000px 600px at 0% 100%, oklch(0.9 0.04 95 / 0.02), transparent 60%);
+  background-attachment: fixed;
   color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -53,8 +64,28 @@ body {
 }
 
 ::selection {
-  background: var(--color-accent-muted);
+  background: oklch(0.85 0.08 88 / 0.28);
   color: var(--color-fg);
+}
+
+/* Quiet, premium scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 0.08);
+  background-clip: content-box;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.85 0.075 88 / 0.18);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Numeric data should always use tabular figures */
@@ -62,6 +93,56 @@ body {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+
+/* Glass ------------------------------------------------------------------ */
+
+/* Dark glass panel: translucent surface + blur + hairline gold border and a
+   faint top edge highlight that reads as refracted light. */
+.glass-panel {
+  background: var(--color-surface);
+  backdrop-filter: blur(18px) saturate(1.05);
+  -webkit-backdrop-filter: blur(18px) saturate(1.05);
+  border: 1px solid var(--color-line);
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.045),
+    0 10px 36px -16px oklch(0 0 0 / 0.55);
+}
+
+/* Heavier glass for modals / floating chrome */
+.glass-floating {
+  background: oklch(0.14 0.005 95 / 0.82);
+  backdrop-filter: blur(24px) saturate(1.1);
+  -webkit-backdrop-filter: blur(24px) saturate(1.1);
+  border: 1px solid var(--color-line-strong);
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.06),
+    0 24px 70px -20px oklch(0 0 0 / 0.7),
+    0 0 44px -18px oklch(0.85 0.08 88 / 0.25);
+}
+
+/* Soft champagne glow used on hover — light refraction, not a color swap */
+.glow-hover {
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+}
+.glow-hover:hover {
+  border-color: oklch(0.85 0.075 88 / 0.32);
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.05),
+    0 0 28px -8px oklch(0.85 0.08 88 / 0.28);
+}
+
+/* Metallic champagne text highlight (hero words, key figures) */
+.text-gold-gradient {
+  background: linear-gradient(
+    128deg,
+    oklch(0.94 0.05 95) 0%,
+    oklch(0.86 0.085 88) 42%,
+    oklch(0.78 0.075 84) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* Motion — subtle, entrance only ------------------------------------------ */
@@ -125,6 +206,8 @@ body {
 /* Chart tooltip helper */
 .chart-tooltip {
   border: 1px solid var(--color-line-strong);
-  background: var(--color-surface-2);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+  background: oklch(0.14 0.005 95 / 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.5), 0 0 24px -12px oklch(0.85 0.08 88 / 0.3);
 }

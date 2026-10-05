@@ -20,16 +20,24 @@ const NAV_LINKS = [
 function Wordmark() {
   return (
     <Link href="/" className="group flex items-center gap-2.5" aria-label="AscendMM home">
-      <span className="flex size-7 items-center justify-center rounded-md border border-accent/30 bg-accent-muted">
-        {/* Ascend mark: three ascending steps */}
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      {/* Diamond mark with glass shine, echoing the AscendMM brand mark */}
+      <span className="relative flex size-7 rotate-45 items-center justify-center overflow-hidden rounded-[9px] border border-accent/40 bg-gradient-to-br from-accent/25 via-accent/10 to-transparent shadow-[0_0_16px_-6px_oklch(0.85_0.08_88/0.55)]">
+        <span className="pointer-events-none absolute inset-0 bg-gradient-to-tl from-transparent via-white/15 to-transparent" />
+        {/* Ascend mark: three ascending steps (counter-rotated) */}
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 14 14"
+          fill="none"
+          aria-hidden="true"
+          className="-rotate-45 text-accent"
+        >
           <path
             d="M1.5 12.5L5 8l3 2.5L12.5 3"
             stroke="currentColor"
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-accent"
           />
           <path
             d="M8.5 3h4v4"
@@ -37,12 +45,11 @@ function Wordmark() {
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-accent"
           />
         </svg>
       </span>
       <span className="text-[15px] font-semibold tracking-tight text-fg">
-        Ascend<span className="text-accent">MM</span>
+        Ascend<span className="text-gold-gradient">MM</span>
       </span>
     </Link>
   );
@@ -103,7 +110,7 @@ export function Navbar() {
   const walletLabel = isConnected && address ? shortenAddress(address, 4) : "Connect Wallet";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-background/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-background/70 backdrop-blur-xl">
       <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-8">
           <Wordmark />
@@ -115,7 +122,7 @@ export function Navbar() {
                 className={cn(
                   "rounded-md px-3 py-1.5 text-sm transition-colors",
                   isActive(link.href)
-                    ? "bg-surface-2 text-fg"
+                    ? "bg-accent-muted text-accent"
                     : "text-muted hover:bg-surface-2/60 hover:text-fg",
                 )}
               >
@@ -164,7 +171,7 @@ export function Navbar() {
                 className={cn(
                   "rounded-md px-3 py-2.5 text-sm",
                   isActive(link.href)
-                    ? "bg-surface-2 text-fg"
+                    ? "bg-accent-muted text-accent"
                     : "text-muted hover:bg-surface-2/60 hover:text-fg",
                 )}
               >

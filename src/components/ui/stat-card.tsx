@@ -9,14 +9,14 @@ interface StatCardProps extends React.ComponentProps<"div"> {
 }
 
 /**
- * Displays a single key metric: muted uppercase label, large tabular value,
- * optional secondary hint line (e.g. a delta or footnote).
+ * Displays a single key metric on a dark glass panel: muted uppercase label,
+ * large tabular value, optional secondary hint line (e.g. a delta or footnote).
  */
 export function StatCard({ label, value, hint, className, ...props }: StatCardProps) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-line bg-surface px-4 py-4",
+        "glass-panel glow-hover rounded-xl px-4 py-4",
         className,
       )}
       {...props}
