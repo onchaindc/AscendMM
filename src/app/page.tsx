@@ -6,7 +6,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { PageContainer } from "@/components/layout/page-container";
 import { VaultCard } from "@/components/vault/vault-card";
 import { ALL_VAULTS } from "@/lib/vaults";
-import { LIVE_VAULT_ID } from "@/lib/elysium";
+import { HYPE_VAULT_ID, LIVE_VAULT_ID } from "@/lib/elysium";
 import {
   MOCK_PROTOCOL_METRICS,
 } from "@/lib/mock-data";
@@ -17,7 +17,7 @@ import { formatPercent, formatUsdCompact } from "@/lib/format";
  * leads with the live Elysium testnet vault followed by two preview entries.
  */
 
-const FEATURED_IDS = [LIVE_VAULT_ID, "ascend-hype", "usdc-usdt"];
+const FEATURED_IDS = [LIVE_VAULT_ID, HYPE_VAULT_ID, "usdc-usdt"];
 
 const CAPABILITIES = [
   {
@@ -97,9 +97,10 @@ export default function HomePage() {
             ))}
           </div>
           <p className="mt-3 text-xs text-faint">
-            Preview figures for the upcoming vault lineup. The AscendMM Vault is
-            live on Elysium testnet (chain 99801) with the TEST-ONLY asMMT mock
-            asset — see the vault page for live on-chain stats.
+            Preview figures for the upcoming vault lineup. The AscendMM Vault
+            and the AscendMM HYPE Vault are live on Elysium testnet (chain
+            99801) — asMMT is a TEST-ONLY mock asset; the HYPE vault holds
+            native HYPE — see the vault pages for live on-chain stats.
           </p>
         </PageContainer>
       </section>

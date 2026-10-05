@@ -6,21 +6,25 @@ import { getAddress } from "viem";
 import { useWallet } from "@/components/wallet/wallet-provider";
 import { useVaultContract } from "@/hooks/use-vault-contract";
 import {
-  ASMMT_TOKEN_ADDRESS,
   ELYSIUM_CHAIN_ID,
   ELYSIUM_NETWORK_LABEL,
+  getLiveVaultConfig,
   elysiumExplorerAddressUrl,
 } from "@/lib/elysium";
 import { formatTokenAmount, shortenAddress } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
- * Live on-chain panel for the deployed AscendVault on Elysium testnet.
+ * Live on-chain panel for a deployed AscendVault on Elysium testnet — the
+ * ERC-20 asMMT vault or the native HYPE vault, selected by vault id.
  *
- * Replaces the mock "Vault Statistics" numbers on the live vault's detail
- * page with real contract reads (totalAssets, totalSupply, asset, owner,
- * strategy) plus the connected wallet's balances and allowance. Every read is
- * pinned to chain 99801 through the public RPC.
+ * Replaces the mock "Vault Statistics" numbers on a live vault's detail page
+ * with real contract reads (totalAssets, totalSupply, asset, owner, strategy)
+ * plus the connected wallet's balances. Every read is pinned to chain 99801
+ * through the public RPC. For the HYPE vault the idle assets are the vault's
+ * NATIVE balance, the user's asset balance is their wallet HYPE balance, and
+ * there is no allowance row (HYPE is never an ERC-20 here). Share amounts are
+ * formatted at the vault's own share precision — 21 decimals for HYPE.
  */
 
 function LiveRow({
@@ -68,9 +72,30 @@ function LiveRow({
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-export function LiveVaultPanel() {
+export function LiveVaultPanel({ vaultId }: { vaultId: string }) {
   const { address, isConnected } = useWallet();
-  const { vault, user, isLoading } = useVaultContract(address);
+  const config = getLiveVaultConfig(vaultId);
+  const { vault, user, isLoading } = useVaultContract(address, config);
+
+  const isNative = config?.kind === "native";
+  const assetSymbol = config?.assetSymbol ?? "asMMT";
+  const shareSymbol = config?.shareSymbol ?? "asMMV";
+  const assetDecimals = config?.assetDecimals ?? 18;
+  const shareDecimals = config?.shareDecimals ?? 18;
+  const assetAddress = config?.assetAddress ?? ZERO_ADDRESS;
+
+  // Verify the vault's on-chain asset matches the expected track: the asMMT
+  // token for the ERC-20 vault, or the native sentinel for the HYPE vault.
+  const assetMatches =
+    vault.asset !== undefined &&
+    getAddress(vault.asset) === getAddress(assetAddress);
+  const assetLabel = isNative
+    ? assetMatches
+      ? "HYPE (native sentinel)"
+      : "Unexpected asset"
+    : assetMatches
+      ? "asMMT (TEST-ONLY)"
+      : "Unknown token";
 
   const strategySet =
     vault.strategy !== undefined && vault.strategy !== ZERO_ADDRESS;
@@ -105,7 +130,7 @@ export function LiveVaultPanel() {
                 Total Assets
               </p>
               <p className="data mt-1 text-sm font-medium text-fg">
-                {formatTokenAmount(vault.totalAssets)} asMMT
+                {formatTokenAmount(vault.totalAssets, assetDecimals)} {assetSymbol}
               </p>
             </div>
             <div>
@@ -113,7 +138,7 @@ export function LiveVaultPanel() {
                 Idle Assets
               </p>
               <p className="data mt-1 text-sm font-medium text-fg">
-                {formatTokenAmount(vault.idleAssets)} asMMT
+                {formatTokenAmount(vault.idleAssets, assetDecimals)} {assetSymbol}
               </p>
             </div>
             <div>
@@ -121,7 +146,7 @@ export function LiveVaultPanel() {
                 Deployed (Strategy)
               </p>
               <p className="data mt-1 text-sm font-medium text-fg">
-                {formatTokenAmount(vault.strategyInvested)} asMMT
+                {formatTokenAmount(vault.strategyInvested, assetDecimals)} {assetSymbol}
               </p>
             </div>
             <div>
@@ -129,7 +154,7 @@ export function LiveVaultPanel() {
                 Total Shares
               </p>
               <p className="data mt-1 text-sm font-medium text-fg">
-                {formatTokenAmount(vault.totalSupply)} asMMV
+                {formatTokenAmount(vault.totalSupply, shareDecimals)} {shareSymbol}
               </p>
             </div>
             <div>
@@ -138,7 +163,7 @@ export function LiveVaultPanel() {
               </p>
               <p className="data mt-1 text-sm font-medium text-fg">
                 {vault.sharePrice !== undefined
-                  ? formatTokenAmount(vault.sharePrice)
+                  ? formatTokenAmount(vault.sharePrice, assetDecimals)
                   : "—"}
               </p>
             </div>
@@ -147,20 +172,16 @@ export function LiveVaultPanel() {
                 Underlying Asset
               </p>
               <p className="data mt-1 text-sm font-medium text-fg">
-                {vault.asset
-                  ? getAddress(vault.asset) === getAddress(ASMMT_TOKEN_ADDRESS)
-                    ? "asMMT (TEST-ONLY)"
-                    : "Unknown token"
-                  : "—"}
+                {vault.asset ? assetLabel : "—"}
               </p>
             </div>
           </div>
 
           <div className="mt-4 divide-y divide-line border-t border-line">
             <LiveRow
-              label="Asset contract"
-              value={shortenAddress(ASMMT_TOKEN_ADDRESS, 6)}
-              href={elysiumExplorerAddressUrl(ASMMT_TOKEN_ADDRESS)}
+              label={isNative ? "Asset (native sentinel)" : "Asset contract"}
+              value={shortenAddress(assetAddress, 6)}
+              href={elysiumExplorerAddressUrl(assetAddress)}
             />
             <LiveRow
               label="Vault owner"
@@ -211,26 +232,28 @@ export function LiveVaultPanel() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
-                  asMMT balance
+                  {assetSymbol} balance
                 </p>
                 <p className="data mt-1 text-sm font-medium text-fg">
-                  {formatTokenAmount(user.assetBalance)}
+                  {formatTokenAmount(user.assetBalance, assetDecimals)}
                 </p>
               </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
-                  Vault allowance
-                </p>
-                <p className="data mt-1 text-sm font-medium text-fg">
-                  {formatTokenAmount(user.allowance)}
-                </p>
-              </div>
+              {!isNative ? (
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
+                    Vault allowance
+                  </p>
+                  <p className="data mt-1 text-sm font-medium text-fg">
+                    {formatTokenAmount(user.allowance, assetDecimals)}
+                  </p>
+                </div>
+              ) : null}
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
                   Vault shares
                 </p>
                 <p className="data mt-1 text-sm font-medium text-fg">
-                  {formatTokenAmount(user.shares)} asMMV
+                  {formatTokenAmount(user.shares, shareDecimals)} {shareSymbol}
                 </p>
               </div>
               <div>
@@ -238,25 +261,34 @@ export function LiveVaultPanel() {
                   Asset value
                 </p>
                 <p className="data mt-1 text-sm font-medium text-fg">
-                  {formatTokenAmount(user.assetValue ?? (user.shares !== undefined ? 0n : undefined))} asMMT
+                  {formatTokenAmount(
+                    user.assetValue ?? (user.shares !== undefined ? 0n : undefined),
+                    assetDecimals,
+                  )}{" "}
+                  {assetSymbol}
                 </p>
               </div>
             </div>
           ) : (
             <p className="text-sm text-muted">
-              Balances and allowances appear here once a wallet is connected.
+              Balances appear here once a wallet is connected.
+              {isNative
+                ? " The HYPE vault uses your wallet's native balance — there is no approval step."
+                : ""}
             </p>
           )}
         </div>
       </section>
 
       <p className="text-xs leading-relaxed text-faint">
-        All figures are read live from the deployed AscendVault contract on{" "}
+        All figures are read live from the deployed{" "}
+        {isNative ? "native HYPE" : "asMMT"} vault contract on{" "}
         {ELYSIUM_NETWORK_LABEL} (chain {ELYSIUM_CHAIN_ID}). Idle assets sit in
-        the vault while deployed assets are held by its strategy —
-        idle + deployed = total assets. The underlying asMMT token is a
-        TEST-ONLY mock asset with no value, and the current IdleStrategy
-        generates no yield.
+        the vault while deployed assets are held by its strategy — idle +
+        deployed = total assets.{" "}
+        {isNative
+          ? `HYPE is held as native value — never an ERC-20 — and ${shareSymbol} shares use a ${shareDecimals}-decimal precision (virtual offset). The current HypeIdleStrategy generates no yield.`
+          : `The underlying asMMT token is a TEST-ONLY mock asset with no value, and the current IdleStrategy generates no yield.`}
       </p>
     </div>
   );

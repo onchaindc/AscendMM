@@ -18,55 +18,76 @@ import {
 } from "@/components/ui/modal";
 import { useWallet } from "@/components/wallet/wallet-provider";
 import { useVaultTransaction } from "@/hooks/use-vault-writes";
-import { ascendVaultAbi } from "@/lib/abis";
 import {
-  ASCEND_VAULT_ADDRESS,
+  ascendVaultAbi,
+  hypeVaultAbi,
+  vaultReadsAbi,
+} from "@/lib/abis";
+import {
   ASMMT_TOKEN_ADDRESS,
+  ASCEND_VAULT_ADDRESS,
   ELYSIUM_CHAIN_ID,
   ELYSIUM_NETWORK_LABEL,
+  getLiveVaultConfig,
 } from "@/lib/elysium";
 import { formatTokenAmount } from "@/lib/format";
 import type { Vault } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
- * Real deposit/withdraw flows against the deployed AscendVault on Elysium
- * testnet (chain 99801). Approvals, deposits, and redemptions are genuine
- * contract interactions — no simulation anywhere in this file.
+ * Real deposit/withdraw flows against the two deployed AscendVaults on
+ * Elysium testnet (chain 99801) — the ERC-20 asMMT vault and the native HYPE
+ * vault. Approvals, deposits, and redemptions are genuine contract
+ * interactions — no simulation anywhere in this file.
  *
- * Estimates are real on-chain previews: the deposit modal reads
- * `previewDeposit(assets)` and the withdraw modal reads `previewRedeem(shares)`
- * from the vault (debounced while typing) — no client-side rate math.
+ * ERC-20 track (asMMT): the deposit flow reads `previewDeposit(assets)` and
+ * the withdraw flow reads `previewRedeem(shares)` (debounced while typing).
+ * When the asMMT allowance is insufficient, an approval is broadcast first
+ * and must confirm on-chain before the deposit is sent.
+ *
+ * Native HYPE track: HYPE is NOT an ERC-20 — there is no approve() anywhere.
+ * `deposit()`/`mint()` are payable and send the HYPE amount as msg.value
+ * (mint sends the exact `previewMint(shares)` value), and `withdraw()`/
+ * `redeem()` return native HYPE to the receiver. Share amounts use the
+ * vault's 21-decimal precision (virtual offset) — never hardcoded 18 — while
+ * HYPE asset amounts stay 18 decimals. Wallets are also warned to keep HYPE
+ * aside for gas since the deposit itself consumes the native balance.
  *
  * Transaction states: wallet confirmation → pending → success / failure.
- * Deposit uses the standard ERC-4626 entry: when the asMMT allowance is
- * insufficient, an approval is broadcast first and must confirm on-chain
- * before the deposit is sent. Redemption is strategy-aware: the vault settles
- * withdrawals even while assets are deployed in the strategy. After every
- * confirmed transaction all contract reads are invalidated by the shared
- * transaction hook, so balances and vault state refresh automatically.
+ * After every confirmed transaction all contract reads are invalidated by the
+ * shared transaction hook, so balances and vault state refresh automatically.
  *
  * All user/contract figures arrive via props from `LiveVaultDetail`, which
- * only binds them for the deployed testnet vault — preview vaults can never
- * transact against the live contract.
+ * only binds them for the two deployed testnet vaults — preview vaults can
+ * never transact against the live contracts.
+ *
+ * Every `functionName` below is a string literal so wagmi's per-hook type
+ * inference stays cheap (a union functionName forces deep type instantiation
+ * and makes `tsc` hang); reads that don't apply to the active direction are
+ * simply disabled and never hit the RPC.
  */
 
-const ONE_SHARE = 10n ** 18n;
 const QUICK_PERCENTS = [25, 50, 75, 100];
 
 type TxPhase = "idle" | "confirming" | "pending" | "success" | "error";
+
+/** Entry direction inside the deposit modal (asset-in vs share-in). */
+type DepositDirection = "deposit" | "mint";
+/** Exit direction inside the withdraw modal (share-in vs asset-in). */
+type WithdrawDirection = "redeem" | "withdraw";
 
 interface ActionModalProps {
   vault: Vault;
   mode: "deposit" | "withdraw";
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Connected wallet (undefined → not connected / not the live vault). */
+  /** Connected wallet (undefined → not connected / not a live vault). */
   userAddress: Address | undefined;
+  /** Asset balance: ERC-20 asMMT balance, or native HYPE for the HYPE vault. */
   userAssetBalance: bigint | undefined;
   userShares: bigint | undefined;
   userAllowance: bigint | undefined;
-  /** Live share price in assets, 1e18 raw base (convertToAssets(1e18)). */
+  /** Live price of ONE SHARE in assets at the vault's own share precision. */
   sharePriceRaw: bigint | undefined;
 }
 
@@ -140,6 +161,39 @@ function TxStateBanner({
   return null;
 }
 
+function DirectionTabs({
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  options: Array<{ key: string; label: string }>;
+  value: string;
+  onChange: (key: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1 rounded-md border border-line bg-surface-2 p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.key}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(option.key)}
+          className={cn(
+            "flex-1 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-40",
+            value === option.key
+              ? "bg-surface text-fg shadow-sm"
+              : "text-muted hover:text-fg",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ActionModal({
   vault,
   mode,
@@ -156,19 +210,39 @@ function ActionModal({
   const { writeContractAsync } = useWriteContract();
 
   const [amount, setAmount] = React.useState("");
+  const [direction, setDirection] = React.useState<DepositDirection | WithdrawDirection>(
+    isDeposit ? "deposit" : "redeem",
+  );
 
-  const assetSymbol = "asMMT"; // TEST-ONLY mock asset (verified on-chain)
-  const shareSymbol = "asMMV"; // vault share token (verified on-chain)
+  // Live-vault config for this vault id — defines track kind, symbols, and
+  // decimals. Undefined only for preview vaults, which never render modals.
+  const config = getLiveVaultConfig(vault.id);
+  const isNative = config?.kind === "native";
+  const assetSymbol = config?.assetSymbol ?? "asMMT";
+  const shareSymbol = config?.shareSymbol ?? "asMMV";
+  const assetDecimals = config?.assetDecimals ?? 18;
+  const shareDecimals = config?.shareDecimals ?? 18;
+  const vaultAddress = config?.vaultAddress ?? ASCEND_VAULT_ADDRESS;
+
+  // Reset the direction toggle when the modal reopens for the other mode.
+  React.useEffect(() => {
+    setDirection(isDeposit ? "deposit" : "redeem");
+  }, [isDeposit, mode]);
+
+  // Asset amounts are 18 decimals on both tracks (HYPE and asMMT); share
+  // amounts use the vault's own share precision (21 for HYPE, 18 for asMMT).
+  const assetIn = direction === "deposit" || direction === "withdraw";
+  const inputDecimals = assetIn ? assetDecimals : shareDecimals;
 
   const parsed = React.useMemo(() => {
     try {
       if (!amount.trim()) return undefined;
-      const value = parseUnits(amount, 18);
+      const value = parseUnits(amount, inputDecimals);
       return value > 0n ? value : undefined;
     } catch {
       return undefined;
     }
-  }, [amount]);
+  }, [amount, inputDecimals]);
 
   // Debounced copy of the parsed amount so live preview reads don't fire on
   // every keystroke against the public RPC.
@@ -180,46 +254,86 @@ function ActionModal({
     return () => clearTimeout(timer);
   }, [parsed]);
 
-  // Real on-chain preview for the entered amount (previewDeposit for the
-  // deposit direction, previewRedeem for the withdraw direction).
-  const preview = useReadContract({
-    abi: ascendVaultAbi,
-    address: ASCEND_VAULT_ADDRESS,
-    functionName: isDeposit ? "previewDeposit" : "previewRedeem",
+  // Real on-chain previews for the entered amount — one literal-name read per
+  // direction (only the active one is enabled; the rest never hit the RPC):
+  //   deposit  → previewDeposit(assets) = shares received
+  //   mint     → previewMint(shares)    = HYPE required as msg.value
+  //   redeem   → previewRedeem(shares)  = assets returned
+  //   withdraw → previewWithdraw(assets) = shares burned
+  const previewEnabled =
+    debouncedParsed !== undefined && userAddress !== undefined && !isWaiting;
+  const previewDeposit = useReadContract({
+    abi: vaultReadsAbi,
+    address: vaultAddress,
+    functionName: "previewDeposit",
     args: [debouncedParsed ?? 0n],
     chainId: ELYSIUM_CHAIN_ID,
-    query: {
-      enabled:
-        debouncedParsed !== undefined &&
-        userAddress !== undefined &&
-        !isWaiting,
-    },
+    query: { enabled: previewEnabled && direction === "deposit" },
   });
-  // Exchange rate for the deposit direction (convertToShares of 1 asset).
+  const previewMint = useReadContract({
+    abi: vaultReadsAbi,
+    address: vaultAddress,
+    functionName: "previewMint",
+    args: [debouncedParsed ?? 0n],
+    chainId: ELYSIUM_CHAIN_ID,
+    query: { enabled: previewEnabled && direction === "mint" },
+  });
+  const previewRedeem = useReadContract({
+    abi: vaultReadsAbi,
+    address: vaultAddress,
+    functionName: "previewRedeem",
+    args: [debouncedParsed ?? 0n],
+    chainId: ELYSIUM_CHAIN_ID,
+    query: { enabled: previewEnabled && direction === "redeem" },
+  });
+  const previewWithdraw = useReadContract({
+    abi: vaultReadsAbi,
+    address: vaultAddress,
+    functionName: "previewWithdraw",
+    args: [debouncedParsed ?? 0n],
+    chainId: ELYSIUM_CHAIN_ID,
+    query: { enabled: previewEnabled && direction === "withdraw" },
+  });
+  // Exchange rate for the asset-in direction (convertToShares of 1 asset).
   const sharesPerAsset = useReadContract({
-    abi: ascendVaultAbi,
-    address: ASCEND_VAULT_ADDRESS,
+    abi: vaultReadsAbi,
+    address: vaultAddress,
     functionName: "convertToShares",
-    args: [ONE_SHARE],
+    args: [10n ** BigInt(assetDecimals)],
     chainId: ELYSIUM_CHAIN_ID,
     query: { enabled: isDeposit },
   });
 
-  const balanceRaw = isDeposit ? userAssetBalance : userShares;
+  const previewData =
+    direction === "deposit"
+      ? previewDeposit.data
+      : direction === "mint"
+        ? previewMint.data
+        : direction === "withdraw"
+          ? previewWithdraw.data
+          : previewRedeem.data;
+
+  // Balance for the entered direction: asset balance for asset-in entries,
+  // share balance for share-in entries.
+  const balanceRaw = assetIn ? userAssetBalance : userShares;
   const exceedsBalance =
     parsed !== undefined && balanceRaw !== undefined && parsed > balanceRaw;
 
-  const allowance = userAllowance ?? 0n;
-  const needsApproval = isDeposit && parsed !== undefined && allowance < parsed;
+  // ERC-20-only concept — the native HYPE flow has no approve() step at all.
+  const needsApproval =
+    !isNative &&
+    isDeposit &&
+    parsed !== undefined &&
+    (userAllowance ?? 0n) < parsed;
 
   const amountValid = parsed !== undefined && !exceedsBalance && userAddress !== undefined;
 
-  // Live share price from the vault contract (1e18 raw base), shown in the
-  // withdraw direction; deposits show the live exchange rate instead.
+  // Live share price from the vault contract, formatted at the vault's own
+  // share precision (21 for HYPE — never assume 18).
   const sharePriceLabel = sharePriceRaw
-    ? formatTokenAmount(sharePriceRaw)
+    ? formatTokenAmount(sharePriceRaw, shareDecimals)
     : "—";
-  const estimateValue = preview.data;
+  const estimateValue = previewData;
 
   React.useEffect(() => {
     if (!open) {
@@ -230,7 +344,7 @@ function ActionModal({
 
   function applyAmountFromRaw(raw: bigint) {
     reset();
-    setAmount(formatTokenAmount(raw));
+    setAmount(formatTokenAmount(raw, inputDecimals));
   }
 
   function setPercent(pct: number) {
@@ -244,34 +358,93 @@ function ActionModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!amountValid || !parsed || !userAddress) return;
+    if (!amountValid || !parsed || !userAddress || !config) return;
 
     if (isDeposit) {
-      // Standard ERC-4626 entry: approve only when the current allowance is
-      // insufficient. The approval must confirm before the deposit goes out;
-      // `resetOnSuccess` returns the form to idle between the two writes.
-      if (needsApproval) {
-        const approved = await execute(() =>
+      if (isNative) {
+        // Native HYPE entry — value IS the deposit amount. No approve() exists
+        // anywhere in this flow; the vault contract is never treated as an
+        // ERC-20 and HYPE is never used as a token contract.
+        if (direction === "mint") {
+          // mint() requires msg.value = previewMint(shares). The live preview
+          // read above is the exact required native value; without it the tx
+          // would underpay and revert.
+          const mintValue = previewData;
+          if (mintValue === undefined) return;
+          await execute(() =>
+            writeContractAsync({
+              address: vaultAddress,
+              abi: hypeVaultAbi,
+              functionName: "mint",
+              args: [parsed, userAddress],
+              value: mintValue,
+              chainId: ELYSIUM_CHAIN_ID,
+            }),
+          );
+        } else {
+          await execute(() =>
+            writeContractAsync({
+              address: vaultAddress,
+              abi: hypeVaultAbi,
+              functionName: "deposit",
+              args: [parsed, userAddress],
+              value: parsed,
+              chainId: ELYSIUM_CHAIN_ID,
+            }),
+          );
+        }
+      } else {
+        // Standard ERC-4626 entry: approve only when the current allowance is
+        // insufficient. The approval must confirm before the deposit goes out;
+        // `resetOnSuccess` returns the form to idle between the two writes.
+        if (needsApproval) {
+          const approved = await execute(() =>
+            writeContractAsync({
+              address: ASMMT_TOKEN_ADDRESS,
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [ASCEND_VAULT_ADDRESS, parsed],
+              chainId: ELYSIUM_CHAIN_ID,
+            }),
+          { resetOnSuccess: true });
+          if (!approved) return;
+        }
+        await execute(() =>
           writeContractAsync({
-            address: ASMMT_TOKEN_ADDRESS,
-            abi: erc20Abi,
-            functionName: "approve",
-            args: [ASCEND_VAULT_ADDRESS, parsed],
+            address: ASCEND_VAULT_ADDRESS,
+            abi: ascendVaultAbi,
+            functionName: "deposit",
+            args: [parsed, userAddress],
             chainId: ELYSIUM_CHAIN_ID,
           }),
-        { resetOnSuccess: true });
-        if (!approved) return;
+        );
       }
-      await execute(() =>
-        writeContractAsync({
-          address: ASCEND_VAULT_ADDRESS,
-          abi: ascendVaultAbi,
-          functionName: "deposit",
-          args: [parsed, userAddress],
-          chainId: ELYSIUM_CHAIN_ID,
-        }),
-      );
+    } else if (isNative) {
+      if (direction === "withdraw") {
+        // Native exit by target asset amount — the vault sends HYPE back.
+        await execute(() =>
+          writeContractAsync({
+            address: vaultAddress,
+            abi: hypeVaultAbi,
+            functionName: "withdraw",
+            args: [parsed, userAddress, userAddress],
+            chainId: ELYSIUM_CHAIN_ID,
+          }),
+        );
+      } else {
+        // Native exit by shares — the vault sends HYPE back.
+        await execute(() =>
+          writeContractAsync({
+            address: vaultAddress,
+            abi: hypeVaultAbi,
+            functionName: "redeem",
+            args: [parsed, userAddress, userAddress],
+            chainId: ELYSIUM_CHAIN_ID,
+          }),
+        );
+      }
     } else {
+      // ERC-20 exit by shares (unchanged asMMT flow, strategy-aware).
       await execute(() =>
         writeContractAsync({
           address: ASCEND_VAULT_ADDRESS,
@@ -283,6 +456,41 @@ function ActionModal({
       );
     }
   }
+
+  // The ERC-20 vault's user-facing ABI is the previously verified surface
+  // (deposit/redeem only); mint/withdraw tabs exist on the HYPE track where
+  // those selectors were verified on-chain.
+  const directionTabs: Array<{ key: string; label: string }> = isDeposit
+    ? isNative
+      ? [
+          { key: "deposit", label: `Deposit ${assetSymbol}` },
+          { key: "mint", label: `Mint ${shareSymbol}` },
+        ]
+      : [{ key: "deposit", label: `Deposit ${assetSymbol}` }]
+    : isNative
+      ? [
+          { key: "redeem", label: `Redeem ${shareSymbol}` },
+          { key: "withdraw", label: `Withdraw ${assetSymbol}` },
+        ]
+      : [{ key: "redeem", label: `Redeem ${shareSymbol}` }];
+
+  const estimateLabel =
+    direction === "deposit"
+      ? "Estimated shares received"
+      : direction === "mint"
+        ? "HYPE required (msg.value)"
+        : direction === "withdraw"
+          ? "Shares to be burned"
+          : "Estimated assets returned";
+
+  const estimateDecimals =
+    direction === "deposit"
+      ? shareDecimals
+      : direction === "mint"
+        ? assetDecimals
+        : direction === "withdraw"
+          ? shareDecimals
+          : assetDecimals;
 
   return (
     <Modal
@@ -298,23 +506,40 @@ function ActionModal({
             {isDeposit ? "Deposit" : "Withdraw"} — {ELYSIUM_NETWORK_LABEL}
           </ModalTitle>
           <ModalDescription>
-            {isDeposit
-              ? `Deposit TEST-ONLY asMMT into the AscendMM vault (chain ${ELYSIUM_CHAIN_ID}).`
-              : `Redeem vault shares (${shareSymbol}) for TEST-ONLY asMMT.`}
+            {isNative
+              ? isDeposit
+                ? `Send native HYPE to the AscendMM HYPE vault (chain ${ELYSIUM_CHAIN_ID}). No approval — the deposit carries HYPE as transaction value.`
+                : `Redeem ${shareSymbol} shares (21-decimal precision) for native HYPE.`
+              : isDeposit
+                ? `Deposit TEST-ONLY asMMT into the AscendMM vault (chain ${ELYSIUM_CHAIN_ID}).`
+                : `Redeem vault shares (${shareSymbol}) for TEST-ONLY asMMT.`}
           </ModalDescription>
         </ModalHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {directionTabs.length > 1 ? (
+            <DirectionTabs
+              options={directionTabs}
+              value={direction}
+              onChange={(key) => {
+                reset();
+                setAmount("");
+                setDirection(key as DepositDirection | WithdrawDirection);
+              }}
+              disabled={isWaiting}
+            />
+          ) : null}
+
           <div>
             <label
-              htmlFor={`${mode}-amount`}
+              htmlFor={`${mode}-${direction}-amount`}
               className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-faint"
             >
-              {isDeposit ? `Amount (${assetSymbol})` : `Amount (${shareSymbol} shares)`}
+              Amount ({assetIn ? assetSymbol : shareSymbol})
             </label>
             <div className="relative">
               <Input
-                id={`${mode}-amount`}
+                id={`${mode}-${direction}-amount`}
                 type="text"
                 inputMode="decimal"
                 placeholder="0.00"
@@ -327,7 +552,7 @@ function ActionModal({
                 className="data pr-16 text-right text-base"
               />
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint">
-                {isDeposit ? assetSymbol : shareSymbol}
+                {assetIn ? assetSymbol : shareSymbol}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between">
@@ -345,25 +570,31 @@ function ActionModal({
                 ))}
               </div>
               <p className="text-xs text-faint">
-                {isDeposit ? "Token balance" : "Share balance"}:{" "}
-                <span className="data">{formatTokenAmount(balanceRaw)}</span>
+                {assetIn ? `${assetSymbol} balance` : `${shareSymbol} shares`}:{" "}
+                <span className="data">
+                  {formatTokenAmount(balanceRaw, assetIn ? assetDecimals : shareDecimals)}
+                </span>
               </p>
             </div>
             {exceedsBalance ? (
               <p className="mt-1.5 text-xs text-negative">
-                Amount exceeds your {isDeposit ? "token" : "share"} balance.
+                Amount exceeds your {assetIn ? `${assetSymbol} balance` : `${shareSymbol} share balance`}.
+              </p>
+            ) : null}
+            {isNative && isDeposit ? (
+              <p className="mt-1.5 text-xs text-faint">
+                Deposits are native HYPE transfers — keep a little HYPE in your
+                wallet for gas.
               </p>
             ) : null}
           </div>
 
           <div className="rounded-lg border border-line bg-surface-2/40 px-3 py-2.5">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted">
-                {isDeposit ? "Estimated shares received" : "Estimated assets returned"}
-              </span>
+              <span className="text-muted">{estimateLabel}</span>
               <span className="data text-fg">
                 {estimateValue !== undefined
-                  ? formatTokenAmount(estimateValue)
+                  ? formatTokenAmount(estimateValue, estimateDecimals)
                   : "—"}
               </span>
             </div>
@@ -373,18 +604,24 @@ function ActionModal({
               </span>
               <span className="data text-fg">
                 {isDeposit
-                  ? `1 asMMT = ${formatTokenAmount(sharesPerAsset.data)} asMMV`
+                  ? `1 ${assetSymbol} = ${formatTokenAmount(sharesPerAsset.data, shareDecimals)} ${shareSymbol}`
                   : sharePriceLabel}
               </span>
             </div>
             <div className="mt-1.5 flex items-center justify-between text-sm">
               <span className="text-muted">
-                {isDeposit ? "Current allowance" : "Redemption fee"}
+                {isNative && isDeposit
+                  ? "Approval"
+                  : isDeposit
+                    ? "Current allowance"
+                    : "Redemption fee"}
               </span>
               <span className="data text-fg">
-                {isDeposit
-                  ? formatTokenAmount(userAllowance)
-                  : "Not exposed on-chain"}
+                {isNative && isDeposit
+                  ? "Not required — native deposit"
+                  : isDeposit
+                    ? formatTokenAmount(userAllowance)
+                    : "Not exposed on-chain"}
               </span>
             </div>
           </div>
@@ -437,8 +674,12 @@ function ActionModal({
                 {isDeposit
                   ? needsApproval
                     ? "Approve asMMT"
-                    : "Deposit"
-                  : "Withdraw"}
+                    : isNative && direction === "mint"
+                      ? "Mint shares"
+                      : "Deposit"
+                  : direction === "withdraw"
+                    ? "Withdraw"
+                    : "Redeem"}
               </Button>
             </ModalFooter>
           )}
@@ -459,9 +700,9 @@ interface VaultActionsProps {
 }
 
 /**
- * Deposit/Withdraw buttons for the live testnet vault. While disconnected the
- * buttons open the connect modal; on the wrong chain they request a network
- * switch to Elysium 99801.
+ * Deposit/Withdraw buttons for the live testnet vaults. While disconnected
+ * the buttons open the connect modal; on the wrong chain they request a
+ * network switch to Elysium 99801.
  */
 export function VaultActions({
   vault,

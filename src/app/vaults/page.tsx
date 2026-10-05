@@ -8,7 +8,7 @@ import { ALL_VAULTS } from "@/lib/vaults";
 export const metadata: Metadata = {
   title: "Vaults",
   description:
-    "Deploy TEST-ONLY asMMT into the deployed Elysium testnet AscendVault, or explore the upcoming strategy vault lineup.",
+    "Deposit native HYPE or TEST-ONLY asMMT into the deployed Elysium testnet AscendMM vaults, or explore the upcoming strategy vault lineup.",
 };
 
 export default function VaultsPage() {
@@ -25,10 +25,12 @@ export default function VaultsPage() {
       </div>
 
       <p className="mt-6 text-xs leading-relaxed text-faint">
-        The AscendMM Vault entry is live on Elysium Testnet (chain 99801) and
-        transacts with the deployed contracts; its underlying asMMT asset is a
-        TEST-ONLY mock with no value. The remaining vaults are Phase 1 preview
-        entries — not yet deployed.
+        The AscendMM Vault and the AscendMM HYPE Vault entries are live on
+        Elysium Testnet (chain 99801) and transact with the deployed contracts;
+        the asMMT asset is a TEST-ONLY mock with no value, and the HYPE vault
+        holds native HYPE (no ERC-20 approval — deposits carry HYPE as
+        transaction value). The remaining vaults are Phase 1 preview entries —
+        not yet deployed.
       </p>
     </PageContainer>
   );

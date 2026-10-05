@@ -9,19 +9,20 @@ import { useWallet } from "@/components/wallet/wallet-provider";
 import { useVaultContract } from "@/hooks/use-vault-contract";
 import {
   ELYSIUM_CHAIN_ID,
-  STRATEGY_ADDRESS,
+  getLiveVaultConfig,
   elysiumExplorerAddressUrl,
 } from "@/lib/elysium";
 import { formatTokenAmount, shortenAddress } from "@/lib/format";
 
 /**
- * Live strategy section for the deployed testnet vault. All values come from
- * the vault contract itself (strategy()/strategyInvested()) — visually
- * secondary to the deposit/redeem experience.
+ * Live strategy section for a deployed testnet vault (ERC-20 asMMT track or
+ * native HYPE track). All values come from the vault contract itself
+ * (strategy()/strategyInvested()) — visually secondary to the deposit/redeem
+ * experience.
  *
- * The deployed strategy is an IdleStrategy: it holds assets without deploying
- * them and generates NO yield. investIdle()/exitStrategy() are owner-only
- * operations and are deliberately not exposed as user actions.
+ * Both deployed strategies are idle strategies: they hold assets without
+ * deploying them and generate NO yield. investIdle()/exitStrategy() are
+ * owner-only operations and are deliberately not exposed as user actions.
  */
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -41,11 +42,13 @@ function StrategyRow({
   );
 }
 
-export function LiveStrategyCard() {
+export function LiveStrategyCard({ vaultId }: { vaultId: string }) {
   const { address } = useWallet();
-  const { vault, isLoading } = useVaultContract(address);
+  const config = getLiveVaultConfig(vaultId);
+  const { vault, isLoading } = useVaultContract(address, config);
 
   const strategySet = vault.strategy !== undefined && vault.strategy !== ZERO_ADDRESS;
+  const assetSymbol = config?.assetSymbol ?? "asMMT";
 
   return (
     <Card>
@@ -78,27 +81,37 @@ export function LiveStrategyCard() {
             <StrategyRow label="Type">Idle</StrategyRow>
             <StrategyRow label="Deployed assets">
               <span className="data">
-                {formatTokenAmount(vault.strategyInvested)} asMMT
+                {formatTokenAmount(vault.strategyInvested, config?.assetDecimals ?? 18)}{" "}
+                {assetSymbol}
               </span>
             </StrategyRow>
             <StrategyRow label="Strategy address">
               <span className="inline-flex items-center gap-1.5">
                 <a
-                  href={elysiumExplorerAddressUrl(STRATEGY_ADDRESS)}
+                  href={
+                    config
+                      ? elysiumExplorerAddressUrl(config.strategyAddress)
+                      : undefined
+                  }
                   target="_blank"
                   rel="noreferrer"
                   className="data inline-flex items-center gap-1 text-accent transition-colors hover:text-accent-hover"
                 >
-                  {shortenAddress(STRATEGY_ADDRESS, 6)}
+                  {config ? shortenAddress(config.strategyAddress, 6) : "—"}
                   <ExternalLink className="size-3" />
                 </a>
-                <CopyButton value={STRATEGY_ADDRESS} label="Copy strategy address" />
+                {config ? (
+                  <CopyButton
+                    value={config.strategyAddress}
+                    label="Copy strategy address"
+                  />
+                ) : null}
               </span>
             </StrategyRow>
           </dl>
         )}
         <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-faint">
-          The current IdleStrategy holds assets without deploying them and
+          The current idle strategy holds {assetSymbol} without deploying it and
           generates no yield — no APY or performance is shown because none
           exists on-chain yet. Deposits stay idle in the vault;{" "}
           <span className="text-muted">

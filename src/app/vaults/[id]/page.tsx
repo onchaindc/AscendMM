@@ -20,6 +20,7 @@ import { VaultStats } from "@/components/vault/vault-stats";
 import { ALL_VAULTS } from "@/lib/vaults";
 import {
   ELYSIUM_NETWORK_LABEL,
+  getLiveVaultConfig,
   isLiveVaultId,
 } from "@/lib/elysium";
 import { formatPercent, formatUsdCompact } from "@/lib/format";
@@ -70,6 +71,8 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
   if (!vault) notFound();
 
   const isLive = isLiveVaultId(vault.id);
+  const liveConfig = getLiveVaultConfig(vault.id);
+  const isNative = liveConfig?.kind === "native";
 
   return (
     <PageContainer>
@@ -111,8 +114,9 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
           <LiveVaultDetail vault={vault} />
           {isLive ? (
             <p className="mt-2 text-xs text-faint">
-              Real transactions on {ELYSIUM_NETWORK_LABEL} — approve, deposit,
-              and redeem hit the deployed contracts.
+              {isNative
+                ? `Real transactions on ${ELYSIUM_NETWORK_LABEL} — deposits carry native HYPE as transaction value (no approval); withdrawals return HYPE.`
+                : `Real transactions on ${ELYSIUM_NETWORK_LABEL} — approve, deposit, and redeem hit the deployed contracts.`}
             </p>
           ) : null}
         </div>
@@ -171,7 +175,7 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
         </Card>
 
         {isLive ? (
-          <LiveStrategyCard />
+          <LiveStrategyCard vaultId={vault.id} />
         ) : (
           <Card>
             <CardHeader>
@@ -206,7 +210,7 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
           <h2 className="mb-4 text-lg font-semibold tracking-tight text-fg">
             Live chain state — {ELYSIUM_NETWORK_LABEL} (chain 99801)
           </h2>
-          <LiveVaultPanel />
+          <LiveVaultPanel vaultId={vault.id} />
         </section>
       ) : null}
 
@@ -243,9 +247,11 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
       </div>
 
       <p className="mt-8 text-xs leading-relaxed text-faint">
-        {isLive
-          ? `All chain reads are pinned to ${ELYSIUM_NETWORK_LABEL} (chain 99801) through the public RPC. asMMT is a TEST-ONLY mock asset with no value.`
-          : "This vault is a preview entry. Contract reads, share balances, and live performance indexing will be connected once the ERC-4626 vaults are deployed to Elysium testnet."}
+        {isNative
+          ? `All chain reads are pinned to ${ELYSIUM_NETWORK_LABEL} (chain 99801) through the public RPC. HYPE is held as native value — never an ERC-20 — and asHYPEV shares use a 21-decimal virtual offset.`
+          : isLive
+            ? `All chain reads are pinned to ${ELYSIUM_NETWORK_LABEL} (chain 99801) through the public RPC. asMMT is a TEST-ONLY mock asset with no value.`
+            : "This vault is a preview entry. Contract reads, share balances, and live performance indexing will be connected once the ERC-4626 vaults are deployed to Elysium testnet."}
       </p>
     </PageContainer>
   );

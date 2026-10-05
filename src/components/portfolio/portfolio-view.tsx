@@ -9,6 +9,10 @@ import { StatCard } from "@/components/ui/stat-card";
 import { useWallet } from "@/components/wallet/wallet-provider";
 import { useVaultContract } from "@/hooks/use-vault-contract";
 import { formatTokenAmount, shortenAddress } from "@/lib/format";
+import {
+  ASMMT_VAULT_CONFIG,
+  HYPE_VAULT_CONFIG,
+} from "@/lib/elysium";
 import { CopyButton } from "@/components/ui/copy-button";
 
 function PositionRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -21,14 +25,18 @@ function PositionRow({ label, value }: { label: string; value: React.ReactNode }
 }
 
 /**
- * Portfolio view backed by real wallet + contract state. The deployed Elysium
- * testnet vault is the only live position source; historical cost-basis/PnL
- * tracking requires an indexer and is intentionally omitted rather than
- * simulated.
+ * Portfolio view backed by real wallet + contract state. The two deployed
+ * Elysium testnet vaults are the only live position sources — the ERC-20
+ * asMMT vault and the native HYPE vault — each read through its own config.
+ * Historical cost-basis/PnL tracking requires an indexer and is intentionally
+ * omitted rather than simulated.
  */
 export function PortfolioView() {
   const { address, isConnected, openConnectModal } = useWallet();
-  const { user, isLoading } = useVaultContract(address);
+
+  // Both live tracks read independently through their own configs.
+  const asMMT = useVaultContract(address, ASMMT_VAULT_CONFIG);
+  const hype = useVaultContract(address, HYPE_VAULT_CONFIG);
 
   if (!isConnected || !address) {
     return (
@@ -42,8 +50,9 @@ export function PortfolioView() {
               Connect your wallet to view your portfolio.
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-              Your asMMT balance, asMMV shares, and allowance for the deployed
-              Elysium testnet vault will appear here.
+              Your asMMT balance, asMMV shares, native HYPE balance, and asHYPEV
+              shares across the deployed Elysium testnet vaults will appear
+              here.
             </p>
           </div>
           <Button onClick={openConnectModal}>
@@ -55,39 +64,36 @@ export function PortfolioView() {
     );
   }
 
-  // Current value of the user's shares in assets, converted by the vault
-  // itself (convertToAssets(userShares)) — strategy-aware by construction.
-  // 1:1 while the vault is empty; 0 when no shares are held.
-  const positionValueRaw =
-    user.assetValue ?? (user.shares !== undefined ? 0n : undefined);
-  const hasPosition =
-    user.shares !== undefined && user.shares > 0n;
+  // Current value of each position in assets, converted by the vault itself
+  // (convertToAssets(userShares)) — strategy-aware by construction. 1:1 while
+  // a vault is empty; 0 when no shares are held.
+  const asMMTValueRaw =
+    asMMT.user.assetValue ??
+    (asMMT.user.shares !== undefined ? 0n : undefined);
+  const hypeValueRaw =
+    hype.user.assetValue ?? (hype.user.shares !== undefined ? 0n : undefined);
+  const hasAsMMTPosition = asMMT.user.shares !== undefined && asMMT.user.shares > 0n;
+  const hasHypePosition = hype.user.shares !== undefined && hype.user.shares > 0n;
+  const hasAnyPosition = hasAsMMTPosition || hasHypePosition;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="asMMT Balance"
-          value={isLoading ? "…" : formatTokenAmount(user.assetBalance)}
+          value={asMMT.isLoading ? "…" : formatTokenAmount(asMMT.user.assetBalance)}
         />
         <StatCard
           label="asMMV Shares"
-          value={isLoading ? "…" : formatTokenAmount(user.shares)}
+          value={asMMT.isLoading ? "…" : formatTokenAmount(asMMT.user.shares)}
         />
         <StatCard
-          label="Position Value (asMMT)"
-          value={
-            isLoading ? "…" : formatTokenAmount(positionValueRaw)
-          }
+          label="Native HYPE"
+          value={hype.isLoading ? "…" : formatTokenAmount(hype.user.assetBalance)}
         />
         <StatCard
-          label="Wallet"
-          value={
-            <span className="flex items-center gap-1">
-              {shortenAddress(address, 4)}
-              <CopyButton value={address as Address} label="Copy address" />
-            </span>
-          }
+          label="asHYPEV Shares (21-dec)"
+          value={hype.isLoading ? "…" : formatTokenAmount(hype.user.shares, 21)}
         />
       </div>
 
@@ -96,24 +102,40 @@ export function PortfolioView() {
           <CardTitle>Your Positions</CardTitle>
         </CardHeader>
         <CardContent>
-          {hasPosition ? (
+          {hasAnyPosition ? (
             <dl className="divide-y divide-line">
               <PositionRow
                 label="AscendMM Vault (asMMT) — Elysium Testnet"
                 value={
-                  isLoading ? "…" : `${formatTokenAmount(user.shares)} asMMV`
+                  asMMT.isLoading ? "…" : `${formatTokenAmount(asMMT.user.shares)} asMMV`
                 }
               />
               <PositionRow
-                label="Underlying value"
-                value={isLoading ? "…" : `${formatTokenAmount(positionValueRaw)} asMMT`}
+                label="Underlying value (asMMT)"
+                value={
+                  asMMT.isLoading ? "…" : `${formatTokenAmount(asMMTValueRaw)} asMMT`
+                }
+              />
+              <PositionRow
+                label="AscendMM HYPE Vault (native HYPE) — Elysium Testnet"
+                value={
+                  hype.isLoading
+                    ? "…"
+                    : `${formatTokenAmount(hype.user.shares, 21)} asHYPEV`
+                }
+              />
+              <PositionRow
+                label="Underlying value (HYPE)"
+                value={
+                  hype.isLoading ? "…" : `${formatTokenAmount(hypeValueRaw)} HYPE`
+                }
               />
             </dl>
           ) : (
             <p className="py-6 text-center text-sm text-muted">
-              {isLoading
-                ? "Reading your on-chain position…"
-                : "No asMMV shares yet. Deposit TEST-ONLY asMMT into the vault to open a position."}
+              {asMMT.isLoading || hype.isLoading
+                ? "Reading your on-chain positions…"
+                : "No vault shares yet. Deposit TEST-ONLY asMMT or native HYPE into the live Elysium testnet vaults to open a position."}
             </p>
           )}
         </CardContent>
@@ -121,8 +143,10 @@ export function PortfolioView() {
 
       <p className="text-xs leading-relaxed text-faint">
         Live on-chain data from Elysium Testnet (chain 99801). asMMT is a
-        TEST-ONLY mock asset with no value. Historical cost-basis and PnL
-        tracking will be added with the protocol indexer.
+        TEST-ONLY mock asset with no value. The HYPE vault holds native HYPE —
+        never an ERC-20 — and its asHYPEV shares use a 21-decimal virtual
+        offset. Historical cost-basis and PnL tracking will be added with the
+        protocol indexer.
       </p>
     </div>
   );
