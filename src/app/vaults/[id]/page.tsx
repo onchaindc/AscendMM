@@ -18,6 +18,11 @@ import {
 } from "@/components/vault/registry-status-card";
 import { RiskMetadataDisclaimer } from "@/components/ui/protocol-risk-badge";
 import { VaultActivity } from "@/components/vault/vault-activity";
+import {
+  VaultActivityFeed,
+  VaultAllocationReal,
+  VaultAnalyticsSection,
+} from "@/components/vault/vault-analytics-section";
 import { VaultAllocation } from "@/components/vault/vault-allocation";
 import { VaultContractCard } from "@/components/vault/vault-contract-card";
 import { VaultPerformanceChart } from "@/components/vault/vault-performance-chart";
@@ -178,7 +183,11 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
             <CardTitle>Vault Allocation</CardTitle>
           </CardHeader>
           <CardContent>
-            <VaultAllocation allocation={vault.allocation} />
+            {isLive && liveConfig ? (
+              <VaultAllocationReal config={liveConfig} />
+            ) : (
+              <VaultAllocation allocation={vault.allocation} />
+            )}
           </CardContent>
         </Card>
 
@@ -240,11 +249,8 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
             <CardTitle>Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLive ? (
-              <p className="py-6 text-center text-sm text-muted">
-                On-chain deposit and redemption activity will be indexed here
-                once the protocol indexer ships.
-              </p>
+            {isLive && liveConfig ? (
+              <VaultActivityFeed config={liveConfig} />
             ) : (
               <VaultActivity items={vault.activity} />
             )}
@@ -257,6 +263,12 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
           <VaultContractCard contract={vault.contract} />
         )}
       </div>
+
+      {isLive && liveConfig ? (
+        <div className="mt-8">
+          <VaultAnalyticsSection config={liveConfig} />
+        </div>
+      ) : null}
 
       {isLive ? <RiskMetadataDisclaimer className="mt-8" /> : null}
       <p
