@@ -140,11 +140,6 @@ export function PortfolioView() {
           )}
         </CardContent>
       </Card>
-
-      <p className="text-xs leading-relaxed text-faint">
-        Live on-chain data from Elysium Testnet. Historical cost-basis and PnL
-        tracking will be added as more history accumulates on-chain.
-      </p>
     </div>
   );
 }

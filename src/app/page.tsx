@@ -1,160 +1,198 @@
 import Link from "next/link";
-import { ArrowRight, Activity, Gauge, Layers } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  ScanLine,
+  ShieldCheck,
+  Waypoints,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { StatCard } from "@/components/ui/stat-card";
 import { PageContainer } from "@/components/layout/page-container";
-import { VaultCard } from "@/components/vault/vault-card";
-import { ALL_VAULTS } from "@/lib/vaults";
-import { HYPE_VAULT_ID, LIVE_VAULT_ID } from "@/lib/elysium";
+import {
+  ASMMT_VAULT_CONFIG,
+  HYPE_VAULT_CONFIG,
+} from "@/lib/elysium";
 
 /**
- * Homepage facts — only values that are true on-chain today. The featured
- * grid leads with the live Elysium testnet vaults followed by a preview
- * entry.
+ * Homepage — one dominant hero, one quiet explainer, one clean featured row.
+ * Every claim is a fact about the deployed Elysium testnet protocol; no
+ * metrics that cannot be read on-chain are rendered.
  */
 
-const FEATURED_IDS = [LIVE_VAULT_ID, HYPE_VAULT_ID, "usdc-usdt"];
+const VAULT_ROWS = [
+  {
+    id: HYPE_VAULT_CONFIG.id,
+    name: HYPE_VAULT_CONFIG.vaultName,
+    asset: "Native HYPE",
+    detail: "Payable deposits — no approval step",
+  },
+  {
+    id: ASMMT_VAULT_CONFIG.id,
+    name: ASMMT_VAULT_CONFIG.vaultName,
+    asset: "asMMT (testnet asset)",
+    detail: "ERC-4626 share vault — approve, deposit, redeem",
+  },
+] as const;
 
-const CAPABILITIES = [
+const STEPS = [
   {
-    icon: Activity,
-    title: "Active Market Making",
-    body: "Liquidity can eventually be actively managed instead of sitting passively in a pool.",
+    icon: ScanLine,
+    title: "Connect any wallet",
+    body: "Browser wallets connect directly. Mobile wallets scan a WalletConnect QR — no extension required.",
   },
   {
-    icon: Layers,
-    title: "Strategy Vaults",
-    body: "Capital can be allocated to specialized market-making strategies.",
+    icon: Waypoints,
+    title: "Deposit into a vault",
+    body: "Every vault is a deployed ERC-4626 contract on Elysium. Shares mint 1:1 while the vault is empty and prices are read live from chain.",
   },
   {
-    icon: Gauge,
-    title: "Elysium Native",
-    body: "Designed around Elysium's high-frequency trading environment.",
+    icon: ShieldCheck,
+    title: "Withdraw on your terms",
+    body: "Redemptions are strategy-aware and settle on-chain. The current idle strategies generate no yield — nothing is promised.",
   },
-];
-
-const METRICS = [
-  { label: "Live Vaults", value: "2" },
-  { label: "Live Strategies", value: "2" },
-  { label: "Network", value: "Elysium Testnet" },
-  { label: "Current Strategy Yield", value: "0%" },
-];
+] as const;
 
 export default function HomePage() {
-  const featured = FEATURED_IDS.map((id) =>
-    ALL_VAULTS.find((vault) => vault.id === id),
-  ).filter((vault): vault is (typeof ALL_VAULTS)[number] => Boolean(vault));
-
   return (
     <div>
       {/* Hero ------------------------------------------------------------- */}
-      <section className="border-b border-line">
-        <PageContainer className="py-16 sm:py-24">
-          <div className="max-w-3xl animate-fade-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs text-muted backdrop-blur-sm">
-              <span className="size-1.5 rounded-full bg-positive" />
-              Live on Elysium Testnet · chain 99801
+      <section className="relative overflow-hidden">
+        <PageContainer className="py-20 sm:py-28 lg:py-36">
+          <div className="mx-auto max-w-3xl text-center">
+            <span
+              className="inline-flex animate-fade-up items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs text-muted backdrop-blur-sm"
+              style={{ animationDelay: "0ms" }}
+            >
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-positive opacity-60" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-positive" />
+              </span>
+              Live on Elysium Testnet
             </span>
 
-            <h1 className="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight text-fg sm:text-5xl lg:text-6xl">
-              Professional liquidity
+            <h1
+              className="mt-8 animate-fade-up text-5xl font-semibold leading-[1.05] tracking-tight text-fg sm:text-6xl lg:text-7xl"
+              style={{ animationDelay: "60ms" }}
+            >
+              Market-making vaults,
               <br />
-              for <span className="text-gold-gradient">Elysium.</span>
+              <span className="text-gold-gradient">built for Elysium.</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
-              Actively managed vaults built for high-frequency markets.
+            <p
+              className="mx-auto mt-6 max-w-xl animate-fade-up text-base leading-relaxed text-muted sm:text-lg"
+              style={{ animationDelay: "120ms" }}
+            >
+              Deposit native HYPE or asMMT into deployed vaults, hold strategy
+              shares, and redeem anytime — every state read live from chain
+              99801.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Button size="lg" asChild>
-                <Link href="/vaults/ascend-asmmt-testnet">
-                  Open the Live Vault
+            <div
+              className="mt-10 flex animate-fade-up flex-col items-center justify-center gap-3 sm:flex-row"
+              style={{ animationDelay: "180ms" }}
+            >
+              <Button size="lg" asChild className="w-full sm:w-auto">
+                <Link href="/vaults">
+                  Explore vaults
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/vaults">Explore Vaults</Link>
+              <Button
+                size="lg"
+                variant="outline"
+                asChild
+                className="w-full sm:w-auto"
+              >
+                <Link href="/strategies">View strategies</Link>
               </Button>
             </div>
-          </div>
 
-          {/* Protocol metrics */}
-          <div className="mt-14 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {METRICS.map((metric) => (
-              <StatCard
-                key={metric.label}
-                label={metric.label}
-                value={metric.value}
-              />
-            ))}
+            <p
+              className="mt-8 animate-fade-up text-xs leading-relaxed text-faint"
+              style={{ animationDelay: "240ms" }}
+            >
+              Testnet deployment · assets have no value · no yield is currently
+              generated
+            </p>
           </div>
-          <p className="mt-3 text-xs text-faint">
-            Preview figures for the upcoming vault lineup. The AscendMM Vault
-            and the AscendMM HYPE Vault are live on Elysium Testnet — see the
-            vault pages for live on-chain stats.
-          </p>
         </PageContainer>
       </section>
 
-      {/* Capabilities ----------------------------------------------------- */}
-      <section className="border-b border-line">
-        <PageContainer>
-          <div className="max-w-2xl">
-            <h2 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-              Built for active liquidity
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted sm:text-[15px]">
-              AscendMM is being built as the professional market-making layer for
-              Elysium — where liquidity is managed by strategy, not left idle.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {CAPABILITIES.map(({ icon: Icon, title, body }) => (
-              <div
-                key={title}
-                className="glass-panel glow-hover rounded-xl p-6"
-              >
-                <span className="inline-flex size-9 items-center justify-center rounded-lg border border-line bg-surface-2 backdrop-blur-sm">
+      {/* How it works — one quiet section, real facts only ------------------ */}
+      <section className="border-t border-line">
+        <PageContainer className="py-16 sm:py-20">
+          <div className="grid gap-10 lg:grid-cols-3 lg:gap-12">
+            {STEPS.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="max-w-sm">
+                <span className="inline-flex size-9 items-center justify-center rounded-lg border border-line bg-surface-2">
                   <Icon className="size-4 text-accent" />
                 </span>
-                <h3 className="mt-4 text-[15px] font-semibold tracking-tight text-fg">
+                <h2 className="mt-4 text-[15px] font-semibold tracking-tight text-fg">
                   {title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{body}</p>
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  {body}
+                </p>
               </div>
             ))}
           </div>
         </PageContainer>
       </section>
 
-      {/* Featured vaults -------------------------------------------------- */}
-      <section>
-        <PageContainer>
+      {/* Featured vaults — the two live deployments ------------------------- */}
+      <section className="border-t border-line">
+        <PageContainer className="py-16 sm:py-20">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-                Featured vaults
+                Deployed vaults
               </h2>
-              <p className="mt-3 text-sm text-muted sm:text-[15px]">
-                The live testnet vault plus a preview of the lineup coming at
-                launch.
+              <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">
+                Two vaults are live and transactable on Elysium Testnet. Their
+                total assets, share prices, and your positions are read
+                directly from the contracts.
               </p>
             </div>
             <Link
               href="/vaults"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-colors hover:text-accent-hover"
             >
-              View all vaults
-              <ArrowRight className="size-3.5" />
+              All vaults
+              <ArrowUpRight className="size-3.5" />
             </Link>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((vault) => (
-              <VaultCard key={vault.id} vault={vault} />
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {VAULT_ROWS.map(({ id, name, asset, detail }) => (
+              <Link
+                key={id}
+                href={`/vaults/${id}`}
+                className="glass-panel glow-hover group flex flex-col rounded-xl p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[15px] font-semibold tracking-tight text-fg">
+                      {name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-faint">{asset}</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-positive/25 bg-positive/10 px-2 py-0.5 text-[11px] font-medium text-positive">
+                    <span className="size-1.5 rounded-full bg-positive" />
+                    Live
+                  </span>
+                </div>
+
+                <p className="mt-4 text-sm leading-relaxed text-muted">
+                  {detail}
+                </p>
+
+                <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors group-hover:text-accent">
+                  Open vault
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Link>
             ))}
           </div>
         </PageContainer>

@@ -3,7 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShieldAlert, Wallet, X } from "lucide-react";
+import {
+  Menu,
+  ShieldAlert,
+  Wallet,
+  X,
+} from "lucide-react";
+import { useAccount } from "wagmi";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -98,6 +104,9 @@ export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const { address, isConnected, setConnectModalOpen } = useWallet();
+  // wagmi restores the last session on load; keep the button usable during
+  // that window instead of flashing "Connect Wallet".
+  const { isReconnecting, connector: activeConnector } = useAccount();
 
   // Close the mobile menu whenever the route changes.
   React.useEffect(() => {
@@ -107,7 +116,11 @@ export function Navbar() {
   const isActive = (href: string) =>
     href === "/vaults" ? pathname.startsWith("/vaults") : pathname.startsWith(href);
 
-  const walletLabel = isConnected && address ? shortenAddress(address, 4) : "Connect Wallet";
+  const walletLabel = isConnected && address
+    ? shortenAddress(address, 4)
+    : isReconnecting
+      ? "Reconnecting…"
+      : "Connect Wallet";
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/70 backdrop-blur-xl">
@@ -139,6 +152,11 @@ export function Navbar() {
             size="sm"
             onClick={() => setConnectModalOpen(true)}
             aria-haspopup="dialog"
+            title={
+              isConnected && activeConnector
+                ? `Connected via ${activeConnector.name}`
+                : undefined
+            }
           >
             <Wallet className="size-3.5" />
             {walletLabel}

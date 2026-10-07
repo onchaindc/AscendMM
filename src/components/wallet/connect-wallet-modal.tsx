@@ -1,8 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, CheckCircle2, Loader2, ShieldAlert, Wallet } from "lucide-react";
-import { useConnect, useDisconnect, type Connector } from "wagmi";
+import { AlertCircle, CheckCircle2, Loader2, QrCode, ShieldAlert, Wallet } from "lucide-react";
+import {
+  useConnect,
+  useDisconnect,
+  type Connector,
+  useAccount,
+} from "wagmi";
 
 import {
   Modal,
@@ -25,15 +30,28 @@ import {
 
 /**
  * Real wallet connection modal for Elysium testnet. Lists browser wallets
- * detected via EIP-6963 plus WalletConnect-compatible wallets, connects on
- * request, and doubles as the account panel while a wallet is connected
- * (address, network guard, disconnect).
+ * detected via EIP-6963 plus a WalletConnect entry (QR / mobile deep link via
+ * the official connector's own modal), connects on request, and doubles as
+ * the account panel while a wallet is connected (address, active connector,
+ * network guard, disconnect).
  */
 
-/** User-facing name for a connector (never expose internal plumbing terms). */
+/**
+ * User-facing name for a connector. Internal plumbing names ("Injected",
+ * "WalletConnect") are never shown; a friendly label is used instead — the
+ * WalletConnect row is a flow (scan/redirect), not a specific wallet brand.
+ */
 function connectorDisplayName(name: string): string {
   if (/injected/i.test(name)) return "Browser wallet";
+  if (/walletconnect/i.test(name)) return "Mobile wallet (QR)";
   return name;
+}
+
+/** Secondary label clarifying what each option is. */
+function connectorKindLabel(name: string): string | null {
+  if (/injected/i.test(name)) return "Detected in this browser";
+  if (/walletconnect/i.test(name)) return "Scan with any WalletConnect wallet";
+  return null;
 }
 export function ConnectWalletModal() {
   const {
@@ -49,6 +67,7 @@ export function ConnectWalletModal() {
 
   const { connectors, connectAsync, isPending: connectPending } = useConnect();
   const { disconnect } = useDisconnect();
+  const { connector: activeConnector } = useAccount();
   const [connectingId, setConnectingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -95,9 +114,25 @@ export function ConnectWalletModal() {
             </ModalHeader>
 
             <div className="flex items-center justify-between rounded-md border border-line bg-background px-3 py-2.5">
-              <span className="data text-sm text-fg">{shortenAddress(address, 6)}</span>
+              <span className="flex items-center gap-2.5">
+                <span className="inline-flex size-7 items-center justify-center overflow-hidden rounded border border-line bg-surface-2">
+                  {activeConnector?.icon ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={activeConnector.icon} alt="" width={16} height={16} />
+                  ) : (
+                    <Wallet className="size-3.5 text-muted" />
+                  )}
+                </span>
+                <span className="data text-sm text-fg">{shortenAddress(address, 6)}</span>
+              </span>
               <CopyButton value={address} label="Copy wallet address" />
             </div>
+
+            {activeConnector ? (
+              <p className="mt-2 text-xs text-faint">
+                Connected via {connectorDisplayName(activeConnector.name)}
+              </p>
+            ) : null}
 
             {onWrongNetwork ? (
               <div className="mt-3 rounded-md border border-warning/30 bg-warning/10 px-3 py-2.5 text-xs leading-relaxed text-warning">
@@ -156,9 +191,11 @@ export function ConnectWalletModal() {
                       onClick={() => handleConnect(connector)}
                       className="flex w-full items-center justify-between rounded-md border border-line bg-surface px-3 py-3 text-sm text-fg transition-colors hover:border-accent/40 hover:bg-surface-2 disabled:opacity-50"
                     >
-                      <span className="flex items-center gap-2.5">
-                        <span className="inline-flex size-7 items-center justify-center overflow-hidden rounded border border-line bg-surface-2">
-                          {connector.icon ? (
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span className="inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded border border-line bg-surface-2">
+                          {connector.name === "WalletConnect" ? (
+                            <QrCode className="size-3.5 text-accent" />
+                          ) : connector.icon ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={connector.icon}
@@ -170,10 +207,19 @@ export function ConnectWalletModal() {
                             <Wallet className="size-3.5 text-muted" />
                           )}
                         </span>
-                        {connectorDisplayName(connector.name)}
+                        <span className="min-w-0">
+                          <span className="block truncate">
+                            {connectorDisplayName(connector.name)}
+                          </span>
+                          {connectorKindLabel(connector.name) ? (
+                            <span className="block truncate text-[11px] text-faint">
+                              {connectorKindLabel(connector.name)}
+                            </span>
+                          ) : null}
+                        </span>
                       </span>
                       {isConnecting ? (
-                        <Loader2 className="size-4 animate-spin text-accent" />
+                        <Loader2 className="size-4 shrink-0 animate-spin text-accent" />
                       ) : null}
                     </button>
                   );

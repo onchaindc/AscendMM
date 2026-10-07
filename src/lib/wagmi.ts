@@ -68,6 +68,17 @@ export function getWalletErrorMessage(error: unknown): string {
     ) {
       return "Request rejected in wallet.";
     }
+    // WalletConnect session lifecycle: the mobile wallet closed the session,
+    // or the connection/pairing timed out before approval.
+    if (
+      error.name === "WalletConnectDisconnectedError" ||
+      error.name === "WalletSessionExpiredError" ||
+      /session.*(expired|deleted|closed)|pairing.*(expired|timeout)|no matching key/i.test(
+        error.message,
+      )
+    ) {
+      return "Wallet connection lost. Reconnect from the wallet menu and try again.";
+    }
     const shortMessage = (error as { shortMessage?: string }).shortMessage;
     if (shortMessage) return shortMessage;
     if (error.message.length <= 160) return error.message;
