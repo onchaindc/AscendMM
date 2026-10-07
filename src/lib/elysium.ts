@@ -212,65 +212,75 @@ export function isLiveVaultId(id: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Registries — Phase 2C discovery layer (env-configurable, never invented)
+// Registries — deployed + verified on Elysium testnet (Phase 2E)
 // ---------------------------------------------------------------------------
 
 /**
- * The contracts repo (commit 42f252f) ships `VaultRegistry` and
- * `StrategyRegistry` as bookkeeping-only discovery layers, but NEITHER has a
- * recorded Elysium testnet deployment: the repo contains no registry deploy
- * script and no broadcast artifacts, so no trustworthy address exists yet.
+ * The owner-governed VaultRegistry and StrategyRegistry are deployed on this
+ * chain (99801). Every read the frontend performs was verified against the
+ * deployed bytecode on-chain (allVaults / vaultCount / getVault / isActive /
+ * isRegistered, allStrategies / strategyCount / getStrategy / isActive, and
+ * the RISK_* keccak buckets — see scripts/verify-registry-reads.mjs):
+ * VaultRegistry.allVaults() returns exactly the two live vault addresses,
+ * StrategyRegistry.allStrategies() exactly the two live strategy addresses,
+ * and the on-chain RISK_LOW constant equals keccak256("RISK_LOW").
  *
- * Per the integration ground rules these addresses are therefore supplied
- * through environment configuration and are NEVER invented here:
- *
- *   - NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS
- *   - NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS
- *
- * When unset (or malformed) the value is `undefined` and every registry-driven
- * UI surface degrades gracefully: discovery falls back to the two verified
- * deployed vaults read directly from chain 99801, and registry-specific rows
- * render an honest "registry not configured" state instead of fabricated
- * metadata.
+ * The addresses below are the canonical deployment — never invented. An
+ * environment can still override either registry through
+ * NEXT_PUBLIC_*_REGISTRY_ADDRESS (validated at load; a malformed value warns
+ * and keeps the canonical default, so a typo can never take down the app or
+ * point reads at a fabricated contract).
  */
 
+const VAULT_REGISTRY_ADDRESS_FALLBACK =
+  "0xEF46F925Bcc546ECAB7DaE5dF965E3980Fd4B6B8";
+const STRATEGY_REGISTRY_ADDRESS_FALLBACK =
+  "0x14Af880C9d471c00077C9919035574D003d92bFF";
+
 /**
- * Parses an optional checksummed address from the environment. Empty or
- * malformed values disable the corresponding registry integration (with a
- * console warning) rather than throwing — a typo must never take down the app.
+ * Resolves a registry address: the verified canonical default, optionally
+ * overridden by the environment. Empty values keep the default; malformed
+ * values warn and keep the default — never half-trusted, never invented.
  */
-function parseOptionalAddress(raw: string | undefined): Address | undefined {
-  const trimmed = raw?.trim();
-  if (!trimmed) return undefined;
+function resolveRegistryAddress(
+  envRaw: string | undefined,
+  fallback: string,
+  label: string,
+): Address {
+  const trimmed = envRaw?.trim();
+  if (!trimmed) return getAddress(fallback);
   try {
     return getAddress(trimmed);
   } catch {
     console.warn(
-      `[elysium] Ignoring malformed registry address in environment: "${trimmed}"`,
+      `[elysium] Ignoring malformed ${label} registry address in environment: "${trimmed}" — using the verified default ${fallback}`,
     );
-    return undefined;
+    return getAddress(fallback);
   }
 }
 
 /**
- * Deployed VaultRegistry address (owner-controlled vault directory: asset,
- * active flag, vault type, strategy, risk class, metadata/version). Set
- * `NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS` to enable registry-driven vault
- * discovery; `undefined` keeps discovery on direct vault reads only.
+ * Deployed VaultRegistry (owner-controlled vault directory: asset, active
+ * flag, vault type, strategy, risk class, metadata/version). Verified
+ * on-chain: `allVaults()` returns exactly the asMMT AscendVault and the
+ * native HYPE vault, both `active` with their bound idle strategies.
  */
-export const VAULT_REGISTRY_ADDRESS = parseOptionalAddress(
+export const VAULT_REGISTRY_ADDRESS = resolveRegistryAddress(
   process.env.NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS,
+  VAULT_REGISTRY_ADDRESS_FALLBACK,
+  "VaultRegistry",
 );
 
 /**
- * Deployed StrategyRegistry address (owner-controlled strategy allowlist:
- * vault binding, asset, active flag, strategy type, risk class, version,
- * human-readable label). Set `NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS` to
- * enable registry-driven strategy discovery; `undefined` keeps strategy
- * discovery on direct strategy-contract reads only.
+ * Deployed StrategyRegistry (owner-controlled strategy allowlist: vault
+ * binding, asset, active flag, strategy type, risk class, version,
+ * human-readable label). Verified on-chain: `allStrategies()` returns
+ * exactly the HypeIdleStrategy and the asMMT IdleStrategy, both `active`.
  */
-export const STRATEGY_REGISTRY_ADDRESS = parseOptionalAddress(
+export const STRATEGY_REGISTRY_ADDRESS = resolveRegistryAddress(
   process.env.NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS,
+  STRATEGY_REGISTRY_ADDRESS_FALLBACK,
+  "StrategyRegistry",
 );
 
 /** True when the VaultRegistry integration is configured for this environment. */

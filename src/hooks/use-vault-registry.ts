@@ -10,13 +10,14 @@ import { bytes32DisplayLabel, registryRiskFromBytes32 } from "@/lib/registry";
 /**
  * VaultRegistry discovery hooks — the registry-driven vault directory.
  *
- * All reads are pinned to chain 99801 and enabled ONLY while a VaultRegistry
- * address is configured in the environment
- * (`NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS`, see `src/lib/elysium.ts`). When
- * unconfigured the hooks report `configured: false` and every query is
- * disabled — callers render the honest fallback (direct vault reads) instead
- * of touching the chain with a guessed address. Registry data is never
- * fabricated.
+ * All reads are pinned to chain 99801 against the deployed VaultRegistry
+ * (`VAULT_REGISTRY_ADDRESS` in `src/lib/elysium.ts` — the verified canonical
+ * deployment, overridable via `NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS`). The
+ * address is always set, so the list/entry queries are always enabled; a
+ * read failure surfaces as `isError` and callers render the honest
+ * fallback (direct vault reads) instead of fabricated metadata. A zeroed
+ * entry (vault field = 0x0) means "not registered" and is surfaced as such —
+ * registry data is never invented.
  *
  * RPC discipline: the full entry list is one `allVaults()` call; per-vault
  * metadata is one `getVault(vault)` call per entry. Both are React Query

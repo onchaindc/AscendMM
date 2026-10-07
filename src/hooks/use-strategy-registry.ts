@@ -11,12 +11,14 @@ import { bytes32DisplayLabel, registryRiskFromBytes32 } from "@/lib/registry";
  * StrategyRegistry discovery hooks — the registry-driven strategy allowlist.
  *
  * Same contract as `use-vault-registry.ts`: reads are pinned to chain 99801
- * and enabled only while a StrategyRegistry address is configured
- * (`NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS`, see `src/lib/elysium.ts`). When
- * unconfigured the hooks report `configured: false` with every query
- * disabled — strategy discovery then falls back to direct strategy-contract
- * reads (see `use-strategy-contract.ts`) and registry-only fields render as
- * honestly unavailable. Nothing is invented.
+ * against the deployed StrategyRegistry (`STRATEGY_REGISTRY_ADDRESS` in
+ * `src/lib/elysium.ts` — the verified canonical deployment, overridable via
+ * `NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS`). The address is always set, so
+ * the list/entry queries are always enabled; a read failure surfaces as
+ * `isError` and strategy discovery continues on direct strategy-contract
+ * reads (see `use-strategy-contract.ts`) with registry-only fields rendered
+ * as honestly unavailable. A zeroed entry means "not registered" and is
+ * surfaced as such. Nothing is invented.
  *
  * RPC discipline: one `allStrategies()` call for the list plus one
  * `getStrategy(strategy)` call per entry, React Query cached and deduped.

@@ -8,7 +8,7 @@ testnet**: wallet connection, live on-chain vault reads, and real approve /
 deposit / redeem flows are implemented against chain **99801**. Phase 2C adds
 **registry-driven vault and strategy discovery**: the `/vaults` and
 `/strategies` surfaces combine the live vault/strategy configs with on-chain
-`VaultRegistry` / `StrategyRegistry` entries (env-configured, optional), and
+`VaultRegistry` / `StrategyRegistry` entries (deployed and verified on-chain), and
 detail pages describe deployed strategies from verified contract behavior
 instead of preview data. Smart contracts
 are developed separately — nothing here modifies or redeploys them.
@@ -129,26 +129,30 @@ Only the `ascend-asmmt-testnet` (ERC-20 asMMT) and `hype-native-testnet`
 (native HYPE) vault entries are live and transactable; every other entry
 remains a Phase 1 placeholder and can never call the deployed contracts.
 
-## Registry layer (Phase 2C)
+## Registry layer (deployed)
 
-The contracts suite includes owner-governed `VaultRegistry` and
-`StrategyRegistry` contracts. **No registry is deployed on Elysium yet**, so
-the frontend never hardcodes registry addresses — they are read from Next.js
-public env (optional, validated at load):
+The owner-governed `VaultRegistry` and `StrategyRegistry` are live on Elysium
+testnet, and the frontend reads them at their canonical addresses:
 
-```bash
-NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS=0x…     # optional
-NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS=0x…  # optional
-```
+| Registry | Address |
+| --- | --- |
+| VaultRegistry | [`0xEF46F925Bcc546ECAB7DaE5dF965E3980Fd4B6B8`](https://elysium.kinetiq.xyz/testnet-explorer/address/0xEF46F925Bcc546ECAB7DaE5dF965E3980Fd4B6B8) |
+| StrategyRegistry | [`0x14Af880C9d471c00077C9919035574D003d92bFF`](https://elysium.kinetiq.xyz/testnet-explorer/address/0x14Af880C9d471c00077C9919035574D003d92bFF) |
 
-A missing or malformed value logs a warning and disables registry reads: the
-UI stays functional and shows honest "registry not configured" states instead
-of invented entries. Once a registry is configured, `/vaults` and
-`/strategies` additionally render on-chain entries — with risk classes
-decoded client-side from `keccak256("RISK_LOW" | "RISK_MEDIUM" | "RISK_HIGH" |
-"RISK_EXPERIMENTAL")` ids — linked to the Elysium explorer. The registry/IStrategy
-ABIs were transcribed from contract source and must be re-verified against
-the deployed bytecode when a registry ships.
+Verified against the deployed bytecode (`scripts/verify-registry-reads.mjs`,
+read-only): `allVaults()` / `vaultCount()` return exactly the two live vaults,
+`allStrategies()` / `strategyCount()` exactly the two live strategies, every
+`getVault` / `getStrategy` / `isActive` / `isRegistered` view resolves as
+registered and active, the
+`vaultEntry.strategy → StrategyRegistry.getStrategy(...)` cross-check matches
+for both vaults, and the on-chain `RISK_LOW` constant equals
+`keccak256("RISK_LOW")`. `/vaults` and `/strategies` render registry entries
+with risk classes decoded client-side from the `keccak256("RISK_LOW" |
+"RISK_MEDIUM" | "RISK_HIGH" | "RISK_EXPERIMENTAL")` ids, linked to the Elysium
+explorer. Either address can be overridden with `NEXT_PUBLIC_*_REGISTRY_ADDRESS`
+(validated at load; a malformed value warns and keeps the verified default —
+registry reads are never pointed at a fabricated contract). RPC/read failures
+degrade to honest "registry did not respond" states.
 
 All registry-driven surfaces carry the disclaimer: **"Risk classifications
 are protocol metadata and are not audited risk ratings."** Every number shown
@@ -172,9 +176,11 @@ HyperCore/Ascend integration, real analytics/indexing (activity, PnL history),
 backend auth, database integration, and any fee display (no fee getter exists
 on the deployed contract). Preview vault entries cannot transact.
 
+## Environment variables
+
 ```bash
-NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS=0x…     # optional (Phase 2C registry)
-NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS=0x…  # optional (Phase 2C registry)
+NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS=0x…     # optional override, verified default is set
+NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS=0x…  # optional override, verified default is set
 ```
 
 ## Development
@@ -184,6 +190,7 @@ bun install
 bun run dev        # dev server
 bun run typecheck  # tsc --noEmit
 bun run build      # production build
+node scripts/verify-registry-reads.mjs   # read-only on-chain registry probe
 ```
 
 To use the live flows you need an EVM browser wallet with Elysium testnet
