@@ -89,8 +89,8 @@ export function VaultContractCard({ contract }: { contract: VaultContractInfo })
         </div>
         <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-faint">
           {isLive
-            ? "Live contract addresses on Elysium testnet (chain 99801). The underlying asMMT token is a TEST-ONLY mock asset with no value — do not deposit funds."
-            : "Addresses shown are placeholders for the Phase 1 preview. Verified contract addresses will appear here once vaults are deployed to Elysium testnet."}
+            ? "Live contract addresses on Elysium Testnet. asMMT is a testnet asset with no value."
+            : "Addresses shown are placeholders for this preview entry. Verified contract addresses will appear here once the vault is deployed to Elysium Testnet."}
         </p>
       </CardContent>
     </Card>

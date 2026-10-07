@@ -169,7 +169,7 @@ export function LiveStrategyDetail({
                       className="data inline-flex items-center gap-1 text-accent transition-colors hover:text-accent-hover"
                     >
                       {isNative
-                        ? "Native sentinel (verified)"
+                        ? "Native HYPE (verified)"
                         : shortenAddress(onChain.asset, 6)}
                       <ExternalLink className="size-3" />
                     </a>
@@ -271,10 +271,7 @@ export function LiveStrategyDetail({
               </DetailRow>
               {!registry.configured ? (
                 <DetailRow label="Strategy registry">
-                  <span className="text-xs text-faint">
-                    Not configured — set NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS
-                    to surface registry metadata
-                  </span>
+                  <span className="text-xs text-faint">Not registered</span>
                 </DetailRow>
               ) : null}
             </div>

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: "%s · AscendMM",
   },
   description:
-    "Actively managed market-making and strategy vaults for the Elysium ecosystem. Live on Elysium testnet with a TEST-ONLY mock asset (asMMT).",
+    "Actively managed market-making and strategy vaults for the Elysium ecosystem. Live on Elysium Testnet.",
 };
 
 export const viewport: Viewport = {

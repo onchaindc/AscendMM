@@ -139,11 +139,10 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
       {isLive ? (
         <div className="mt-6 rounded-lg border border-line bg-surface px-5 py-4">
           <p className="text-sm leading-relaxed text-muted">
-            Live vault figures are read directly from chain 99801 in the{" "}
-            <span className="font-medium text-fg">Live chain state</span> panel
-            below. No APY, TVL, or performance numbers are published — the
-            current strategy is a no-yield idle strategy and no history exists
-            yet.
+            All vault figures are read live from the vault contract on{" "}
+            <span className="font-medium text-fg">{ELYSIUM_NETWORK_LABEL}</span>
+            {" "}in the panel below. The current idle strategy generates no
+            yield.
           </p>
         </div>
       ) : (
@@ -225,7 +224,7 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
       {isLive ? (
         <section className="mt-8">
           <h2 className="mb-4 text-lg font-semibold tracking-tight text-fg">
-            Live chain state — {ELYSIUM_NETWORK_LABEL} (chain 99801)
+            Live chain state — {ELYSIUM_NETWORK_LABEL}
           </h2>
           <LiveVaultPanel vaultId={vault.id} />
         </section>
@@ -279,9 +278,9 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
         }
       >
         {isNative
-          ? `All chain reads are pinned to ${ELYSIUM_NETWORK_LABEL} (chain 99801) through the public RPC. HYPE is held as native value — never an ERC-20 — and asHYPEV shares use a 21-decimal virtual offset.`
+          ? `All data is read live from ${ELYSIUM_NETWORK_LABEL}. HYPE is held as native value — deposits carry HYPE directly, with no approval step.`
           : isLive
-            ? `All chain reads are pinned to ${ELYSIUM_NETWORK_LABEL} (chain 99801) through the public RPC. asMMT is a TEST-ONLY mock asset with no value.`
+            ? `All data is read live from ${ELYSIUM_NETWORK_LABEL}. asMMT is a testnet asset with no value.`
             : "This vault is a preview entry. Contract reads, share balances, and live performance indexing will be connected once the ERC-4626 vaults are deployed to Elysium testnet."}
       </p>
     </PageContainer>

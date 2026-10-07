@@ -58,7 +58,7 @@ export function VaultActivityFeed({ config }: { config: LiveVaultConfig }) {
     return (
       <p className="flex items-center gap-2 py-4 text-sm text-muted">
         <Loader2 className="size-4 animate-spin" />
-        Reading on-chain activity from chain 99801…
+        Loading activity…
       </p>
     );
   }
@@ -231,7 +231,7 @@ export function VaultAllocationReal({ config }: { config: LiveVaultConfig }) {
     return (
       <p className="flex items-center gap-2 py-4 text-sm text-muted">
         <Loader2 className="size-4 animate-spin" />
-        Reading on-chain allocation from chain 99801…
+Loading allocation…
       </p>
     );
   }
@@ -319,7 +319,7 @@ export function VaultAnalyticsSection({
         {analytics.isLoading ? (
           <p className="flex items-center gap-2 py-4 text-sm text-muted">
             <Loader2 className="size-4 animate-spin" />
-            Reading on-chain analytics from chain 99801…
+            Loading analytics…
           </p>
         ) : analytics.isError || !analytics.data ? (
           <p className="py-4 text-sm text-muted">

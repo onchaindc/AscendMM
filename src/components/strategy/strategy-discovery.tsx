@@ -386,19 +386,14 @@ function KinetiqPreparedCard() {
 function RegistryUnavailableNote() {
   return (
     <div className="rounded-lg border border-line bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
-      Strategy registry not configured in this environment — discovery falls
-      back to the deployed strategy contracts, read directly from{" "}
-      {ELYSIUM_NETWORK_LABEL} (chain {ELYSIUM_CHAIN_ID}). Set{" "}
-      <span className="data text-fg">
-        NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS
-      </span>{" "}
-      to enable registry-driven strategy discovery.
+      Registry directory is temporarily unavailable — live strategy data is
+      shown directly from {ELYSIUM_NETWORK_LABEL} below.
     </div>
   );
 }
 
 const HYPE_IDLE_NAME = "HypeIdleStrategy — native HYPE idle custody";
-const ASMMT_IDLE_NAME = "IdleStrategy — asMMT idle custody (TEST-ONLY)";
+const ASMMT_IDLE_NAME = "IdleStrategy — asMMT idle custody";
 
 const IDLE_BEHAVIOR =
   "Custody-holds the bound vault's asset without deploying it: invest() " +

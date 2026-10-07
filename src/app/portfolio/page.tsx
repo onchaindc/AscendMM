@@ -24,9 +24,8 @@ export default function PortfolioPage() {
       </div>
 
       <p className="mt-6 text-xs leading-relaxed text-faint">
-        Live on-chain data from Elysium Testnet (chain 99801). asMMT is a
-        TEST-ONLY mock asset with no value. Historical cost-basis and PnL
-        tracking will be added with the protocol indexer.
+        Live on-chain data from Elysium Testnet. Historical cost-basis and PnL
+        tracking will be added as more history accumulates on-chain.
       </p>
     </PageContainer>
   );

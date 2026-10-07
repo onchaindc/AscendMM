@@ -24,11 +24,17 @@ import {
 } from "@/lib/elysium";
 
 /**
- * Real wallet connection modal for Elysium testnet. Lists the wallet providers
- * detected via EIP-6963 / injected plumbing, connects on request, and doubles
- * as the account panel while a wallet is connected (address, network guard,
- * disconnect).
+ * Real wallet connection modal for Elysium testnet. Lists browser wallets
+ * detected via EIP-6963 plus WalletConnect-compatible wallets, connects on
+ * request, and doubles as the account panel while a wallet is connected
+ * (address, network guard, disconnect).
  */
+
+/** User-facing name for a connector (never expose internal plumbing terms). */
+function connectorDisplayName(name: string): string {
+  if (/injected/i.test(name)) return "Browser wallet";
+  return name;
+}
 export function ConnectWalletModal() {
   const {
     connectModalOpen,
@@ -128,9 +134,8 @@ export function ConnectWalletModal() {
               </div>
               <ModalTitle>Connect a wallet</ModalTitle>
               <ModalDescription>
-                Connect an EVM wallet to interact with the AscendMM vault on{" "}
-                {ELYSIUM_NETWORK_LABEL} (chain {ELYSIUM_CHAIN_ID}). The vault's
-                underlying asset is a TEST-ONLY mock token (asMMT).
+                Connect a browser wallet or any WalletConnect-compatible wallet
+                to use AscendMM on {ELYSIUM_NETWORK_LABEL}.
               </ModalDescription>
             </ModalHeader>
 
@@ -152,10 +157,20 @@ export function ConnectWalletModal() {
                       className="flex w-full items-center justify-between rounded-md border border-line bg-surface px-3 py-3 text-sm text-fg transition-colors hover:border-accent/40 hover:bg-surface-2 disabled:opacity-50"
                     >
                       <span className="flex items-center gap-2.5">
-                        <span className="inline-flex size-7 items-center justify-center rounded border border-line bg-surface-2">
-                          <Wallet className="size-3.5 text-muted" />
+                        <span className="inline-flex size-7 items-center justify-center overflow-hidden rounded border border-line bg-surface-2">
+                          {connector.icon ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={connector.icon}
+                              alt=""
+                              width={16}
+                              height={16}
+                            />
+                          ) : (
+                            <Wallet className="size-3.5 text-muted" />
+                          )}
                         </span>
-                        {connector.name}
+                        {connectorDisplayName(connector.name)}
                       </span>
                       {isConnecting ? (
                         <Loader2 className="size-4 animate-spin text-accent" />

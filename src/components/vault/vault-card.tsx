@@ -32,7 +32,7 @@ export function VaultCard({ vault }: { vault: Vault }) {
       {vault.contract.status.startsWith("Live") ? (
         <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-positive/25 bg-positive/10 px-2 py-0.5 text-[11px] font-medium text-positive">
           <span className="size-1.5 rounded-full bg-positive" />
-          Live on Elysium Testnet · TEST-ONLY asMMT
+          Live on Elysium Testnet
         </p>
       ) : null}
 

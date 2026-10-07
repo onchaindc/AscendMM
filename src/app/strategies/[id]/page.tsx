@@ -33,14 +33,14 @@ const LIVE_STRATEGY_META: Record<string, { name: string; behavior: string }> = {
     behavior:
       "The native HYPE track's idle strategy: custody-holds the vault's HYPE " +
       "without deploying it, generates no yield, and moves value only with " +
-      "its bound vault. All figures below are read live from chain 99801.",
+      "its bound vault. All figures below are read live from Elysium Testnet.",
   },
   [ASMMT_IDLE_STRATEGY_ID]: {
-    name: "IdleStrategy — asMMT idle custody (TEST-ONLY)",
+    name: "IdleStrategy — asMMT idle custody",
     behavior:
-      "The ERC-20 track's idle strategy: custody-holds the vault's TEST-ONLY " +
-      "asMMT asset without deploying it, generates no yield, and moves value " +
-      "only with its bound vault. All figures below are read live from chain 99801.",
+      "The ERC-20 track's idle strategy: custody-holds the vault's asMMT " +
+      "asset without deploying it, generates no yield, and moves value " +
+      "only with its bound vault. All figures below are read live from Elysium Testnet.",
   },
 };
 

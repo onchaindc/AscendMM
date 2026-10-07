@@ -124,7 +124,7 @@ function TxStateBanner({
     return (
       <div className="flex items-start gap-2 rounded-md border border-accent/30 bg-accent-muted px-3 py-2.5 text-xs leading-relaxed text-accent">
         <Spinner />
-        Confirm this transaction in your wallet…
+        Confirm in wallet…
       </div>
     );
   }
@@ -154,7 +154,9 @@ function TxStateBanner({
     return (
       <div className="flex items-start gap-2 rounded-md border border-negative/25 bg-negative/10 px-3 py-2.5 text-xs leading-relaxed text-negative">
         <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
-        {error}
+        <span>
+          {error} You can adjust the details and try again.
+        </span>
       </div>
     );
   }
@@ -508,11 +510,11 @@ function ActionModal({
           <ModalDescription>
             {isNative
               ? isDeposit
-                ? `Send native HYPE to the AscendMM HYPE vault (chain ${ELYSIUM_CHAIN_ID}). No approval — the deposit carries HYPE as transaction value.`
-                : `Redeem ${shareSymbol} shares (21-decimal precision) for native HYPE.`
+                ? "Send native HYPE to the AscendMM HYPE vault. No approval — the deposit carries HYPE as transaction value."
+                : `Redeem ${shareSymbol} shares for native HYPE.`
               : isDeposit
-                ? `Deposit TEST-ONLY asMMT into the AscendMM vault (chain ${ELYSIUM_CHAIN_ID}).`
-                : `Redeem vault shares (${shareSymbol}) for TEST-ONLY asMMT.`}
+                ? "Deposit asMMT into the AscendMM vault."
+                : `Redeem vault shares (${shareSymbol}) for asMMT.`}
           </ModalDescription>
         </ModalHeader>
 
@@ -648,8 +650,8 @@ function ActionModal({
             error={error}
             pendingLabel={
               isDeposit
-                ? "Deposit submitted — waiting for confirmation on Elysium testnet…"
-                : "Redemption submitted — waiting for confirmation on Elysium testnet…"
+                ? "Transaction pending — your deposit is being confirmed on Elysium Testnet…"
+                : "Transaction pending — your redemption is being confirmed on Elysium Testnet…"
             }
           />
 

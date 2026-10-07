@@ -7,14 +7,11 @@ import { PageContainer } from "@/components/layout/page-container";
 import { VaultCard } from "@/components/vault/vault-card";
 import { ALL_VAULTS } from "@/lib/vaults";
 import { HYPE_VAULT_ID, LIVE_VAULT_ID } from "@/lib/elysium";
-import {
-  MOCK_PROTOCOL_METRICS,
-} from "@/lib/mock-data";
-import { formatPercent, formatUsdCompact } from "@/lib/format";
 
 /**
- * Homepage figures come from the Phase 1 preview metrics; the featured grid
- * leads with the live Elysium testnet vault followed by two preview entries.
+ * Homepage facts — only values that are true on-chain today. The featured
+ * grid leads with the live Elysium testnet vaults followed by a preview
+ * entry.
  */
 
 const FEATURED_IDS = [LIVE_VAULT_ID, HYPE_VAULT_ID, "usdc-usdt"];
@@ -38,13 +35,10 @@ const CAPABILITIES = [
 ];
 
 const METRICS = [
-  {
-    label: "Total Value Locked",
-    value: formatUsdCompact(MOCK_PROTOCOL_METRICS.totalValueLocked),
-  },
-  { label: "Active Vaults", value: String(MOCK_PROTOCOL_METRICS.activeVaults) },
-  { label: "24h Volume", value: formatUsdCompact(MOCK_PROTOCOL_METRICS.volume24h) },
-  { label: "Average APY", value: formatPercent(MOCK_PROTOCOL_METRICS.averageApy) },
+  { label: "Live Vaults", value: "2" },
+  { label: "Live Strategies", value: "2" },
+  { label: "Network", value: "Elysium Testnet" },
+  { label: "Current Strategy Yield", value: "0%" },
 ];
 
 export default function HomePage() {
@@ -98,9 +92,8 @@ export default function HomePage() {
           </div>
           <p className="mt-3 text-xs text-faint">
             Preview figures for the upcoming vault lineup. The AscendMM Vault
-            and the AscendMM HYPE Vault are live on Elysium testnet (chain
-            99801) — asMMT is a TEST-ONLY mock asset; the HYPE vault holds
-            native HYPE — see the vault pages for live on-chain stats.
+            and the AscendMM HYPE Vault are live on Elysium Testnet — see the
+            vault pages for live on-chain stats.
           </p>
         </PageContainer>
       </section>

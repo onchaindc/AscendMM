@@ -1,3 +1,5 @@
+import { Info } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 /**
@@ -41,15 +43,22 @@ export function ProtocolRiskBadge({
 }
 
 /**
- * Required companion copy for every surface that renders protocol risk
- * classifications. Kept as a single component so the exact wording stays
- * consistent across /vaults, /strategies, and the detail pages.
+ * Compact companion note for every surface that renders protocol risk
+ * classifications. Kept as a single component so the wording stays consistent
+ * across /vaults, /strategies, and the detail pages. Deliberately styled as
+ * small secondary text — transparency without dominating the page.
  */
 export function RiskMetadataDisclaimer({ className }: { className?: string }) {
   return (
-    <p className={cn("text-xs leading-relaxed text-faint", className)}>
-      Risk classifications are protocol metadata and are not audited risk
-      ratings.
+    <p
+      title="Risk classifications are protocol metadata and are not audited risk ratings."
+      className={cn(
+        "inline-flex cursor-help items-center gap-1.5 text-[11px] text-faint",
+        className,
+      )}
+    >
+      <Info className="size-3 shrink-0" aria-hidden />
+      Risk ratings are protocol metadata, not audited assessments.
     </p>
   );
 }

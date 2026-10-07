@@ -10,12 +10,43 @@
 
 import { createConfig, http } from "wagmi";
 import { injected } from "@wagmi/connectors/injected";
+import { walletConnect } from "@wagmi/connectors/walletConnect";
 
 import { ELYSIUM_RPC_URL, elysiumTestnet } from "./elysium";
 
+/**
+ * Public WalletConnect Cloud project ID (NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID).
+ * It is a public client identifier — never a secret — but it is still provided
+ * through the environment rather than hardcoded. When it is not configured the
+ * WalletConnect option is simply omitted and browser wallets keep working, so
+ * a missing variable can never break the app.
+ */
+const walletConnectProjectId =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim() || undefined;
+
+const connectors = [
+  injected({ shimDisconnect: true }),
+  // WalletConnect-compatible wallets (mobile wallets, QR / deep links).
+  ...(walletConnectProjectId
+    ? [
+        walletConnect({
+          projectId: walletConnectProjectId,
+          metadata: {
+            name: "AscendMM",
+            description:
+              "Market-making and strategy vaults on the Elysium ecosystem.",
+            url: "https://ascendmm.xyz",
+            icons: [],
+          },
+          showQrModal: true,
+        }),
+      ]
+    : []),
+];
+
 export const wagmiConfig = createConfig({
   chains: [elysiumTestnet],
-  connectors: [injected({ shimDisconnect: true })],
+  connectors,
   transports: {
     [elysiumTestnet.id]: http(ELYSIUM_RPC_URL),
   },

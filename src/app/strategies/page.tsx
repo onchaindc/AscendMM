@@ -27,12 +27,9 @@ export default function StrategiesPage() {
       <RiskMetadataDisclaimer className="mt-6" />
       <p className="mt-2 text-xs leading-relaxed text-faint">
         The two deployed idle strategies custody-hold their vault&apos;s asset
-        and generate no yield — no APY, performance, or dollar TVL is published
-        because none exists on-chain. The Kinetiq kHYPE adapter is implemented
-        in the protocol repository but is deliberately not deployed and not
-        registered on Elysium testnet (chain 99801): kHYPE, the StakingManager,
-        and the StakingAccountant have no Elysium addresses, so kHYPE yield is
-        not currently available through AscendMM.
+        and generate no yield. The Kinetiq kHYPE adapter is coming soon — it
+        is implemented in the protocol but not yet deployed on Elysium
+        Testnet, so kHYPE yield is not currently available through AscendMM.
       </p>
     </PageContainer>
   );

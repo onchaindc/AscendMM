@@ -273,7 +273,7 @@ function RegistryVaultDiscoveryCard({ vaultAddress }: { vaultAddress: Address })
           </p>
           <p className="mt-0.5 text-xs text-faint">
             {isNativeAsset
-              ? "Underlying asset: HYPE (native sentinel)"
+              ? "Underlying asset: native HYPE"
               : entry
                 ? `Underlying asset: ${shortenAddress(entry.asset, 6)}`
                 : "—"}
@@ -357,11 +357,8 @@ function RegistryVaultDiscoveryCard({ vaultAddress }: { vaultAddress: Address })
 function RegistryUnavailableNote() {
   return (
     <div className="rounded-lg border border-line bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
-      Vault registry not configured in this environment — discovery falls back
-      to the two verified deployed vaults, read directly from{" "}
-      {ELYSIUM_NETWORK_LABEL} (chain {ELYSIUM_CHAIN_ID}). Set{" "}
-      <span className="data text-fg">NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS</span>{" "}
-      to enable registry-driven discovery.
+      Registry directory is temporarily unavailable — live vault data is shown
+      directly from {ELYSIUM_NETWORK_LABEL} below.
     </div>
   );
 }

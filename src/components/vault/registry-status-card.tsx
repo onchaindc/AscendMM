@@ -175,9 +175,7 @@ export function VaultRegistryStatusCard({ vaultId }: { vaultId: string }) {
                 <ExternalLink className="size-3" />
               </a>
             ) : (
-              <span className="text-xs text-faint">
-                Not configured (NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS unset)
-              </span>
+              <span className="text-xs text-faint">Not registered</span>
             )}
           </InfoRow>
           <InfoRow label="Registration">

@@ -177,7 +177,7 @@ export const ASMMT_VAULT_CONFIG: LiveVaultConfig = {
   shareSymbol: "asMMV",
   assetDecimals: 18,
   shareDecimals: 18,
-  assetLabel: "asMMT (TEST-ONLY)",
+  assetLabel: "asMMT",
   vaultName: "AscendMM Vault",
 };
 

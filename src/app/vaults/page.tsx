@@ -27,12 +27,10 @@ export default function VaultsPage() {
       <RiskMetadataDisclaimer className="mt-6" />
       <p className="mt-2 text-xs leading-relaxed text-faint">
         The native HYPE vault and the ERC-20 asMMT vault are live on Elysium
-        Testnet (chain 99801) and transact with the deployed contracts. Total
-        assets are read from the vaults themselves; the asMMT asset is a
-        TEST-ONLY mock with no value, and the HYPE vault holds native HYPE (no
-        ERC-20 approval — deposits carry HYPE as transaction value). No APY,
-        performance, or dollar TVL is published: none of it exists on-chain.
-        Additional registered vaults appear here once a VaultRegistry address
+        Testnet and transact with the deployed contracts. Total assets are
+        read from the vaults themselves; asMMT is a testnet asset with no
+        value, and the HYPE vault carries deposits directly as transaction
+        value. Additional registered vaults appear here once a VaultRegistry address
         is configured for this environment.
       </p>
     </PageContainer>

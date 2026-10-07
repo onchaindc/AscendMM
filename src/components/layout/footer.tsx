@@ -41,10 +41,9 @@ export function Footer() {
               Status
             </p>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Live on Elysium Testnet (chain 99801). The deployed AscendVault
-              accepts the TEST-ONLY asMMT mock asset — a safe environment to
-              test deposits and redemptions end to end. Remaining interfaces
-              are Phase 1 previews with demo data.
+              Live on Elysium Testnet. The deployed vaults accept asMMT, a
+              testnet asset with no value — a safe environment to try deposits
+              and redemptions end to end.
             </p>
           </div>
         </div>
@@ -54,7 +53,7 @@ export function Footer() {
             © {new Date().getFullYear()} AscendMM. Elysium Testnet.
           </p>
           <p className="text-xs text-faint">
-            Elysium Testnet · TEST-ONLY asMMT (mock asset, no value) · Nothing on this site is financial advice
+            Elysium Testnet · asMMT is a testnet asset with no value · Nothing on this site is financial advice
           </p>
         </div>
       </div>

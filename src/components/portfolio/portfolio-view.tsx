@@ -135,18 +135,15 @@ export function PortfolioView() {
             <p className="py-6 text-center text-sm text-muted">
               {asMMT.isLoading || hype.isLoading
                 ? "Reading your on-chain positions…"
-                : "No vault shares yet. Deposit TEST-ONLY asMMT or native HYPE into the live Elysium testnet vaults to open a position."}
+                : "No vault shares yet. Deposit asMMT or native HYPE on Elysium Testnet to open a position."}
             </p>
           )}
         </CardContent>
       </Card>
 
       <p className="text-xs leading-relaxed text-faint">
-        Live on-chain data from Elysium Testnet (chain 99801). asMMT is a
-        TEST-ONLY mock asset with no value. The HYPE vault holds native HYPE —
-        never an ERC-20 — and its asHYPEV shares use a 21-decimal virtual
-        offset. Historical cost-basis and PnL tracking will be added with the
-        protocol indexer.
+        Live on-chain data from Elysium Testnet. Historical cost-basis and PnL
+        tracking will be added as more history accumulates on-chain.
       </p>
     </div>
   );

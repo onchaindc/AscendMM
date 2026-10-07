@@ -91,10 +91,10 @@ export function LiveVaultPanel({ vaultId }: { vaultId: string }) {
     getAddress(vault.asset) === getAddress(assetAddress);
   const assetLabel = isNative
     ? assetMatches
-      ? "HYPE (native sentinel)"
+      ? "Native HYPE"
       : "Unexpected asset"
     : assetMatches
-      ? "asMMT (TEST-ONLY)"
+      ? "asMMT"
       : "Unknown token";
 
   const strategySet =
@@ -179,7 +179,7 @@ export function LiveVaultPanel({ vaultId }: { vaultId: string }) {
 
           <div className="mt-4 divide-y divide-line border-t border-line">
             <LiveRow
-              label={isNative ? "Asset (native sentinel)" : "Asset contract"}
+              label={isNative ? "Asset (native HYPE)" : "Asset contract"}
               value={shortenAddress(assetAddress, 6)}
               href={elysiumExplorerAddressUrl(assetAddress)}
             />
@@ -286,9 +286,7 @@ export function LiveVaultPanel({ vaultId }: { vaultId: string }) {
         {ELYSIUM_NETWORK_LABEL} (chain {ELYSIUM_CHAIN_ID}). Idle assets sit in
         the vault while deployed assets are held by its strategy — idle +
         deployed = total assets.{" "}
-        {isNative
-          ? `HYPE is held as native value — never an ERC-20 — and ${shareSymbol} shares use a ${shareDecimals}-decimal precision (virtual offset). The current HypeIdleStrategy generates no yield.`
-          : `The underlying asMMT token is a TEST-ONLY mock asset with no value, and the current IdleStrategy generates no yield.`}
+        The current idle strategy generates no yield.
       </p>
     </div>
   );

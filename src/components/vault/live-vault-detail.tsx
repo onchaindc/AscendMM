@@ -58,8 +58,8 @@ export function LiveVaultDetail({ vault }: { vault: Vault }) {
       {!isConnected ? (
         <p className="text-xs leading-relaxed text-faint">
           {isNative
-            ? "Connect an Elysium wallet to deposit native HYPE or redeem asHYPEV shares."
-            : "Connect an Elysium wallet to deposit TEST-ONLY asMMT or redeem asMMV shares."}
+            ? "Connect a wallet to deposit native HYPE or redeem asHYPEV shares."
+            : "Connect a wallet to deposit asMMT or redeem asMMV shares."}
         </p>
       ) : null}
     </div>

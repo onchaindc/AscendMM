@@ -34,7 +34,7 @@ export const LIVE_TESTNET_VAULT: Vault = {
   assets: ["asMMT"],
   type: "Single-Sided",
   description:
-    "The deployed, strategy-enabled AscendMM vault on Elysium testnet, holding the TEST-ONLY asMMT mock asset. All stats below are read live from chain 99801.",
+    "The deployed, strategy-enabled AscendMM vault on Elysium Testnet. All stats are read live from the vault contract.",
   tvl: 0,
   apy: 0,
   change24h: 0,
