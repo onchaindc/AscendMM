@@ -465,3 +465,239 @@ export const hypeVaultAbi = [
     outputs: [{ type: "uint256" }],
   },
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Phase 2C — registry discovery layer.
+//
+// The read surfaces below are transcribed from the contracts repo source at
+// commit 42f252f (`src/VaultRegistry.sol`, `src/StrategyRegistry.sol`,
+// `src/interfaces/IStrategy.sol`) — nothing is invented. The registries have
+// NO recorded Elysium testnet deployment yet (no deploy script, no broadcast
+// artifacts), so their addresses are supplied through environment
+// configuration (`NEXT_PUBLIC_*_REGISTRY_ADDRESS` in `src/lib/elysium.ts`)
+// and every registry read stays disabled while unset. Once an address is
+// configured, these selectors must be re-verified on-chain (eth_call probe)
+// before the UI is trusted; a mismatching deployment surfaces as a failed
+// query and an honest "registry unavailable" state — never as fabricated
+// data.
+// ---------------------------------------------------------------------------
+
+/**
+ * VaultRegistry read surface (`VaultEntry`):
+ *   { vault, asset, active, vaultType, strategy, riskClass, metadata } —
+ *   with riskClass one of the RISK_* keccak bucket ids.
+ */
+export const registryReadsAbi = [
+  {
+    type: "function",
+    name: "getVault",
+    stateMutability: "view",
+    inputs: [{ name: "vault", type: "address" }],
+    outputs: [
+      {
+        type: "tuple",
+        components: [
+          { name: "vault", type: "address" },
+          { name: "asset", type: "address" },
+          { name: "active", type: "bool" },
+          { name: "vaultType", type: "bytes32" },
+          { name: "strategy", type: "address" },
+          { name: "riskClass", type: "bytes32" },
+          { name: "metadata", type: "bytes32" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "function",
+    name: "allVaults",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address[]" }],
+  },
+  {
+    type: "function",
+    name: "isRegistered",
+    stateMutability: "view",
+    inputs: [{ name: "vault", type: "address" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "isActive",
+    stateMutability: "view",
+    inputs: [{ name: "vault", type: "address" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "vaultCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  // — Public risk-bucket constants (on-chain verification anchors) —
+  {
+    type: "function",
+    name: "RISK_LOW",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "RISK_MEDIUM",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "RISK_HIGH",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "RISK_EXPERIMENTAL",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+] as const;
+
+/**
+ * StrategyRegistry read surface (`Entry`):
+ *   { strategy, vault, asset, active, strategyType, riskClass, version,
+ *     label } — the label is the optional human-readable registration name.
+ */
+export const strategyRegistryReadsAbi = [
+  {
+    type: "function",
+    name: "getStrategy",
+    stateMutability: "view",
+    inputs: [{ name: "strategy", type: "address" }],
+    outputs: [
+      {
+        type: "tuple",
+        components: [
+          { name: "strategy", type: "address" },
+          { name: "vault", type: "address" },
+          { name: "asset", type: "address" },
+          { name: "active", type: "bool" },
+          { name: "strategyType", type: "bytes32" },
+          { name: "riskClass", type: "bytes32" },
+          { name: "version", type: "bytes32" },
+          { name: "label", type: "string" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "function",
+    name: "allStrategies",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address[]" }],
+  },
+  {
+    type: "function",
+    name: "isRegistered",
+    stateMutability: "view",
+    inputs: [{ name: "strategy", type: "address" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "isActive",
+    stateMutability: "view",
+    inputs: [{ name: "strategy", type: "address" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "strategyCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  // — Public risk-bucket constants (on-chain verification anchors) —
+  {
+    type: "function",
+    name: "RISK_LOW",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "RISK_MEDIUM",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "RISK_HIGH",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "RISK_EXPERIMENTAL",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+] as const;
+
+/**
+ * Unified IStrategy read surface (both vault tracks — verified from
+ * `src/interfaces/IStrategy.sol` against the deployed IdleStrategy and
+ * HypeIdleStrategy implementations):
+ *
+ *   - `vault()` — the bound vault address.
+ *   - `asset()` — the underlying asset (ERC-20 token, or the ERC-7528 native
+ *     sentinel on the HYPE track).
+ *   - `cap()` — the investment cap in asset units (0 = unbounded, per the
+ *     deploy scripts' documented semantics).
+ *   - `totalAssets()` — the strategy's self-reported holdings. For both idle
+ *     strategies this is the raw asset balance of the strategy contract
+ *     (verified in source); it is informational only — vault share pricing
+ *     never consults it.
+ *
+ * State-changing functions (invest/divest/divestAll/harvest/report) are
+ * owner/vault-only and deliberately excluded — they are never user actions.
+ */
+export const strategyReadsAbi = [
+  {
+    type: "function",
+    name: "vault",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
+  {
+    type: "function",
+    name: "asset",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
+  {
+    type: "function",
+    name: "cap",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "totalAssets",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+] as const;

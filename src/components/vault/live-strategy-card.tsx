@@ -1,17 +1,24 @@
 "use client";
 
-import { ExternalLink, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ExternalLink, Loader2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/ui/copy-button";
+import { ProtocolRiskBadge } from "@/components/ui/protocol-risk-badge";
 import { useWallet } from "@/components/wallet/wallet-provider";
 import { useVaultContract } from "@/hooks/use-vault-contract";
+import { useStrategyRegistryEntry } from "@/hooks/use-strategy-registry";
 import {
   ELYSIUM_CHAIN_ID,
   getLiveVaultConfig,
   elysiumExplorerAddressUrl,
 } from "@/lib/elysium";
+import {
+  ASMMT_IDLE_STRATEGY_ID,
+  HYPE_IDLE_STRATEGY_ID,
+} from "@/lib/registry";
 import { formatTokenAmount, shortenAddress } from "@/lib/format";
 
 /**
@@ -46,9 +53,14 @@ export function LiveStrategyCard({ vaultId }: { vaultId: string }) {
   const { address } = useWallet();
   const config = getLiveVaultConfig(vaultId);
   const { vault, isLoading } = useVaultContract(address, config);
+  // Registry overlay for this strategy (active flag, risk class, version) —
+  // enabled only while a StrategyRegistry address is configured.
+  const registry = useStrategyRegistryEntry(config?.strategyAddress);
 
   const strategySet = vault.strategy !== undefined && vault.strategy !== ZERO_ADDRESS;
   const assetSymbol = config?.assetSymbol ?? "asMMT";
+  const strategyDetailHref =
+    config?.kind === "native" ? `/strategies/${HYPE_IDLE_STRATEGY_ID}` : `/strategies/${ASMMT_IDLE_STRATEGY_ID}`;
 
   return (
     <Card>
@@ -108,8 +120,49 @@ export function LiveStrategyCard({ vaultId }: { vaultId: string }) {
                 ) : null}
               </span>
             </StrategyRow>
+            <StrategyRow label="Deployment state">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-positive" />
+                Live — deployed on Elysium (chain {ELYSIUM_CHAIN_ID})
+              </span>
+            </StrategyRow>
+            <StrategyRow label="Protocol dependency">
+              None — assets are custody-held by the strategy itself
+            </StrategyRow>
+            <StrategyRow label="Risk class (registry)">
+              {registry.entry?.riskClass ? (
+                <ProtocolRiskBadge risk={registry.entry.riskClass} />
+              ) : (
+                <ProtocolRiskBadge risk="UNRATED" />
+              )}
+            </StrategyRow>
+            {registry.entry?.versionLabel ? (
+              <StrategyRow label="Version (registry)">
+                <span className="data">{registry.entry.versionLabel}</span>
+              </StrategyRow>
+            ) : null}
+            {registry.configured ? (
+              <StrategyRow label="Registry status">
+                {registry.registered === undefined
+                  ? "…"
+                  : registry.registered
+                    ? registry.entry?.active
+                      ? "Registered — active"
+                      : "Registered — paused"
+                    : "Not registered"}
+              </StrategyRow>
+            ) : null}
           </dl>
         )}
+        <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
+          <Link
+            href={strategyDetailHref}
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-accent"
+          >
+            View strategy detail
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
         <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-faint">
           The current idle strategy holds {assetSymbol} without deploying it and
           generates no yield — no APY or performance is shown because none

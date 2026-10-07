@@ -22,7 +22,6 @@ import type {
   PortfolioSummaryData,
   PerformancePoint,
   Position,
-  Strategy,
   Vault,
   VaultActivityItem,
 } from "./types";
@@ -356,62 +355,6 @@ export const MOCK_VAULTS: Vault[] = [
       standard: "ERC-4626",
     },
     performance: buildPerformanceSeries(89, 102.1, 0.0008),
-  },
-];
-
-/* --------------------------------------------------------------------------
- * ⚠️ MOCK STRATEGIES — placeholder strategy marketplace entries. ⚠️
- * ------------------------------------------------------------------------ */
-
-export const MOCK_STRATEGIES: Strategy[] = [
-  {
-    id: "market-maker-alpha",
-    name: "Market Maker Alpha",
-    description: "Inventory-aware market making for volatile pairs.",
-    return30d: 9.6,
-    tvlManaged: 111775,
-    risk: "Moderate",
-    performanceFee: 10,
-    vaultCount: 2,
-    vaultIds: ["ascend-hype", "ascend-usdc"],
-    status: "Active",
-  },
-  {
-    id: "stable-spread-harvester",
-    name: "Stable Spread Harvester",
-    description: "Tight-spread quoting across pegged asset pairs.",
-    return30d: 2.9,
-    tvlManaged: 162690,
-    risk: "Low",
-    performanceFee: 8,
-    vaultCount: 2,
-    vaultIds: ["usdc-usdt", "usdc-single"],
-    status: "Active",
-  },
-  {
-    id: "momentum-rotation",
-    name: "Momentum Rotation",
-    description:
-      "Concentrates inventory into trending assets with strict risk caps.",
-    return30d: 5.1,
-    tvlManaged: 61402,
-    risk: "Moderate",
-    performanceFee: 12,
-    vaultCount: 1,
-    vaultIds: ["hype-single"],
-    status: "Active",
-  },
-  {
-    id: "range-grid-v2",
-    name: "Range Grid v2",
-    description: "Laddered orders that harvest range-bound volatility.",
-    return30d: 1.8,
-    tvlManaged: 38910,
-    risk: "Moderate",
-    performanceFee: 10,
-    vaultCount: 1,
-    vaultIds: ["eth-usdc"],
-    status: "Paused",
   },
 ];
 

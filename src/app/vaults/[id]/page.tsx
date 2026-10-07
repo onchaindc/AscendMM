@@ -12,6 +12,11 @@ import { StatCard } from "@/components/ui/stat-card";
 import { LiveStrategyCard } from "@/components/vault/live-strategy-card";
 import { LiveVaultDetail } from "@/components/vault/live-vault-detail";
 import { LiveVaultPanel } from "@/components/vault/live-vault-panel";
+import {
+  LiveVaultRegistryBadges,
+  VaultRegistryStatusCard,
+} from "@/components/vault/registry-status-card";
+import { RiskMetadataDisclaimer } from "@/components/ui/protocol-risk-badge";
 import { VaultActivity } from "@/components/vault/vault-activity";
 import { VaultAllocation } from "@/components/vault/vault-allocation";
 import { VaultContractCard } from "@/components/vault/vault-contract-card";
@@ -88,16 +93,19 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
       <div className="mt-5 flex flex-col gap-6 border-b border-line pb-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-line-strong px-2 py-0.5 text-[11px] font-medium text-muted">
-              {vault.type}
-            </span>
-            <StatusBadge status={vault.status} />
-            <RiskBadge risk={vault.risk} />
             {isLive ? (
-              <span className="rounded-md border border-positive/25 bg-positive/10 px-2 py-0.5 text-[11px] font-medium text-positive">
-                Live — {ELYSIUM_NETWORK_LABEL}
-              </span>
-            ) : null}
+              /* Live vaults: registry-driven badges only — active/paused and
+                 risk class come from the VaultRegistry when configured. */
+              <LiveVaultRegistryBadges vaultId={vault.id} />
+            ) : (
+              <>
+                <span className="rounded-md border border-line-strong px-2 py-0.5 text-[11px] font-medium text-muted">
+                  {vault.type}
+                </span>
+                <StatusBadge status={vault.status} />
+                <RiskBadge risk={vault.risk} />
+              </>
+            )}
           </div>
           <h1 className="data mt-3 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
             {vault.name}
@@ -243,10 +251,21 @@ export default async function VaultDetailPage({ params }: VaultDetailPageProps) 
           </CardContent>
         </Card>
 
-        <VaultContractCard contract={vault.contract} />
+        {isLive ? (
+          <VaultRegistryStatusCard vaultId={vault.id} />
+        ) : (
+          <VaultContractCard contract={vault.contract} />
+        )}
       </div>
 
-      <p className="mt-8 text-xs leading-relaxed text-faint">
+      {isLive ? <RiskMetadataDisclaimer className="mt-8" /> : null}
+      <p
+        className={
+          isLive
+            ? "mt-2 text-xs leading-relaxed text-faint"
+            : "mt-8 text-xs leading-relaxed text-faint"
+        }
+      >
         {isNative
           ? `All chain reads are pinned to ${ELYSIUM_NETWORK_LABEL} (chain 99801) through the public RPC. HYPE is held as native value — never an ERC-20 — and asHYPEV shares use a 21-decimal virtual offset.`
           : isLive

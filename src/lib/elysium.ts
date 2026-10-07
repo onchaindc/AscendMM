@@ -211,6 +211,78 @@ export function isLiveVaultId(id: string): boolean {
   return id === LIVE_VAULT_ID || id === HYPE_VAULT_ID;
 }
 
+// ---------------------------------------------------------------------------
+// Registries — Phase 2C discovery layer (env-configurable, never invented)
+// ---------------------------------------------------------------------------
+
+/**
+ * The contracts repo (commit 42f252f) ships `VaultRegistry` and
+ * `StrategyRegistry` as bookkeeping-only discovery layers, but NEITHER has a
+ * recorded Elysium testnet deployment: the repo contains no registry deploy
+ * script and no broadcast artifacts, so no trustworthy address exists yet.
+ *
+ * Per the integration ground rules these addresses are therefore supplied
+ * through environment configuration and are NEVER invented here:
+ *
+ *   - NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS
+ *   - NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS
+ *
+ * When unset (or malformed) the value is `undefined` and every registry-driven
+ * UI surface degrades gracefully: discovery falls back to the two verified
+ * deployed vaults read directly from chain 99801, and registry-specific rows
+ * render an honest "registry not configured" state instead of fabricated
+ * metadata.
+ */
+
+/**
+ * Parses an optional checksummed address from the environment. Empty or
+ * malformed values disable the corresponding registry integration (with a
+ * console warning) rather than throwing — a typo must never take down the app.
+ */
+function parseOptionalAddress(raw: string | undefined): Address | undefined {
+  const trimmed = raw?.trim();
+  if (!trimmed) return undefined;
+  try {
+    return getAddress(trimmed);
+  } catch {
+    console.warn(
+      `[elysium] Ignoring malformed registry address in environment: "${trimmed}"`,
+    );
+    return undefined;
+  }
+}
+
+/**
+ * Deployed VaultRegistry address (owner-controlled vault directory: asset,
+ * active flag, vault type, strategy, risk class, metadata/version). Set
+ * `NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS` to enable registry-driven vault
+ * discovery; `undefined` keeps discovery on direct vault reads only.
+ */
+export const VAULT_REGISTRY_ADDRESS = parseOptionalAddress(
+  process.env.NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS,
+);
+
+/**
+ * Deployed StrategyRegistry address (owner-controlled strategy allowlist:
+ * vault binding, asset, active flag, strategy type, risk class, version,
+ * human-readable label). Set `NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS` to
+ * enable registry-driven strategy discovery; `undefined` keeps strategy
+ * discovery on direct strategy-contract reads only.
+ */
+export const STRATEGY_REGISTRY_ADDRESS = parseOptionalAddress(
+  process.env.NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS,
+);
+
+/** True when the VaultRegistry integration is configured for this environment. */
+export function isVaultRegistryConfigured(): boolean {
+  return VAULT_REGISTRY_ADDRESS !== undefined;
+}
+
+/** True when the StrategyRegistry integration is configured for this environment. */
+export function isStrategyRegistryConfigured(): boolean {
+  return STRATEGY_REGISTRY_ADDRESS !== undefined;
+}
+
 /** Explorer URL for a transaction hash on Elysium testnet. */
 export function elysiumExplorerTxUrl(txHash: string): string {
   return `${ELYSIUM_EXPLORER_URL}/transaction/${txHash}`;

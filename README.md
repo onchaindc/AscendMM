@@ -5,7 +5,12 @@ Professional market-making and strategy vault protocol for the Elysium ecosystem
 This repository contains the **AscendMM frontend**. The product shell (Phase 1)
 is now integrated with the **deployed AscendVault on the Kinetiq Elysium
 testnet**: wallet connection, live on-chain vault reads, and real approve /
-deposit / redeem flows are implemented against chain **99801**. Smart contracts
+deposit / redeem flows are implemented against chain **99801**. Phase 2C adds
+**registry-driven vault and strategy discovery**: the `/vaults` and
+`/strategies` surfaces combine the live vault/strategy configs with on-chain
+`VaultRegistry` / `StrategyRegistry` entries (env-configured, optional), and
+detail pages describe deployed strategies from verified contract behavior
+instead of preview data. Smart contracts
 are developed separately — nothing here modifies or redeploys them.
 
 ## Live testnet integration
@@ -84,9 +89,10 @@ user deposit controls.
 | Route            | Purpose                                                     |
 | ---------------- | ----------------------------------------------------------- |
 | `/`              | Overview: hero, metrics, capabilities, featured vaults (leads with the live vault) |
-| `/vaults`        | Vault explorer with type filters (live vault + preview entries) |
-| `/vaults/[id]`   | Vault detail — for the live vault: real chain state panel, approve/deposit/redeem; for preview entries: Phase 1 mock UI |
-| `/strategies`    | Strategy marketplace (preview data)                         |
+| `/vaults`        | Registry-driven vault discovery: live vaults plus any on-chain registry entries |
+| `/vaults/[id]`   | Vault detail — live vaults: registry status + real chain state panel, approve/deposit/redeem; preview entries: Phase 1 mock UI |
+| `/strategies`    | Registry-driven strategy discovery (live idle strategies + registry entries) |
+| `/strategies/[id]` | Strategy detail — live idle strategies: on-chain state + verified behavior; Kinetiq kHYPE LST: static PREPARED/INACTIVE |
 | `/portfolio`     | Live wallet portfolio: asMMT balance, asMMV shares, native HYPE balance, asHYPEV shares |
 
 ## Architecture
@@ -97,11 +103,15 @@ src/
   components/          UI — typed props, no direct data fetching
     layout/  vault/  strategy/  portfolio/  wallet/  ui/
   hooks/
-    use-vault-contract.ts   live contract + user reads (pinned to 99801)
-    use-vault-writes.ts     shared tx state machine (confirm→pending→result)
+    use-vault-contract.ts    live contract + user reads (pinned to 99801)
+    use-vault-writes.ts      shared tx state machine (confirm→pending→result)
+    use-vault-registry.ts    VaultRegistry list + per-vault entry reads (env-gated)
+    use-strategy-registry.ts StrategyRegistry list + entry reads (env-gated)
+    use-strategy-contract.ts IStrategy views (vault/asset/cap/totalAssets)
   lib/
     elysium.ts         ⛓ chain 99801 config + deployed addresses (source of truth)
-    abis.ts            verified vault ABI (no invented signatures)
+    abis.ts            verified vault ABI + registry/strategy read ABIs (no invented signatures)
+    registry.ts        keccak risk-class ids, bytes32 label decoding, strategy route ids
     wagmi.ts           wagmi config (single chain, public RPC, injected connector)
     vaults.ts          vault catalog: live testnet entry + preview entries
     types.ts           domain types the UI renders
@@ -119,13 +129,53 @@ Only the `ascend-asmmt-testnet` (ERC-20 asMMT) and `hype-native-testnet`
 (native HYPE) vault entries are live and transactable; every other entry
 remains a Phase 1 placeholder and can never call the deployed contracts.
 
+## Registry layer (Phase 2C)
+
+The contracts suite includes owner-governed `VaultRegistry` and
+`StrategyRegistry` contracts. **No registry is deployed on Elysium yet**, so
+the frontend never hardcodes registry addresses — they are read from Next.js
+public env (optional, validated at load):
+
+```bash
+NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS=0x…     # optional
+NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS=0x…  # optional
+```
+
+A missing or malformed value logs a warning and disables registry reads: the
+UI stays functional and shows honest "registry not configured" states instead
+of invented entries. Once a registry is configured, `/vaults` and
+`/strategies` additionally render on-chain entries — with risk classes
+decoded client-side from `keccak256("RISK_LOW" | "RISK_MEDIUM" | "RISK_HIGH" |
+"RISK_EXPERIMENTAL")` ids — linked to the Elysium explorer. The registry/IStrategy
+ABIs were transcribed from contract source and must be re-verified against
+the deployed bytecode when a registry ships.
+
+All registry-driven surfaces carry the disclaimer: **"Risk classifications
+are protocol metadata and are not audited risk ratings."** Every number shown
+is a live chain read — idle strategies self-report `totalAssets` only, shown
+as "Total assets (on-chain)", never as USD TVL, APY, or performance.
+
+**Kinetiq kHYPE LST strategy (`/strategies/kinetiq-khype-lst`) is
+PREPARED / INACTIVE, not live.** The contract exists in source only: no
+Elysium address, not deployed, not registered. Its page is fully static (no
+chain reads, no invented numbers) and describes the verified contract
+behavior of `invest`, `divest`, `divestAll`, `totalAssets` and `harvest`.
+No kHYPE yield is offered through the frontend while the strategy is
+undeployed. The deployed `hype-idle` / `asmmt-idle` strategies are no-yield
+idle custody and are labeled "Deployment: Live" with "Yield: None".
+
 ## Deliberately not implemented
 
 Strategy owner operations (`investIdle()` / `exitStrategy()`), real strategy
-yield (the current IdleStrategy generates none), HyperCore/Ascend integration,
-real analytics/indexing (activity, PnL history), backend auth, database
-integration, and any fee display (no fee getter exists on the deployed
-contract). Preview vault entries cannot transact.
+yield (both deployed idle strategies generate none),
+HyperCore/Ascend integration, real analytics/indexing (activity, PnL history),
+backend auth, database integration, and any fee display (no fee getter exists
+on the deployed contract). Preview vault entries cannot transact.
+
+```bash
+NEXT_PUBLIC_VAULT_REGISTRY_ADDRESS=0x…     # optional (Phase 2C registry)
+NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS=0x…  # optional (Phase 2C registry)
+```
 
 ## Development
 
